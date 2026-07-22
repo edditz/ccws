@@ -29,7 +29,7 @@ Claude Code 支持通过 `.claude/settings.json` 的 `permissions.additionalDire
 | 命令 | 行为 |
 |---|---|
 | `ccws init <name> [--root <path>] [--interactive] [--force]` | 在 `$ROOT/<name>` 创建目录 + 生成 `.claude/settings.json` 骨架(`permissions.additionalDirectories: []`)。`--interactive` 用 `@clack/prompts` 选要关联的目录。已存在则报错,`--force` 覆盖重建。 |
-| `ccws add <dir...> [--workspace <name>] [--relative] [--strict]` | 将目录加入该工作区的 `permissions.additionalDirectories`。`--workspace` 缺省时按就近推断。默认存绝对路径(`--relative` 存相对工作区根的相对路径)。去重;目录不存在时默认 warn 仍允许,`--strict` 则拒绝。 |
+| `ccws add <dir...> [--workspace <name>]` | 将目录加入该工作区的 `permissions.additionalDirectories`。`--workspace` 缺省时按就近推断。**路径一律存绝对路径**(相对路径输入用 `path.resolve` 相对当前 cwd 解析为绝对)。去重;**先校验全部目录存在,任一不存在则整次操作失败(原子性:不写入任何变更),并列出无效路径**。 |
 | `ccws remove <dir...> [--workspace <name>]` | 从 `permissions.additionalDirectories` 移除,按规范化路径匹配;未匹配的给出提示。 |
 | `ccws list [name]` (别名 `ls`) | 无参:扫描 `$ROOT` 列出所有工作区 + 各自关联目录数。有参:显示该工作区详情(关联目录清单 + 每个路径是否存在)。 |
 | `ccws status` | 按 cwd 就近判断当前工作区,显示其关联目录与有效性;不在任何工作区内则提示。 |
@@ -67,7 +67,7 @@ ccws/
 │   │   ├── config.ts         # $ROOT 解析(--root > CCWS_ROOT > ~/ccws)、就近推断、工作区发现(扫描)
 │   │   ├── workspace.ts      # 工作区 CRUD(建目录 + 生成 settings.json 骨架)
 │   │   ├── settings.ts       # .claude/settings.json 读写:保留其余字段,仅合并 additionalDirectories
-│   │   └── paths.ts          # 路径规范化(绝对/相对)、存在性校验、去重
+│   │   └── paths.ts          # 路径规范化(→绝对路径)、存在性校验、去重
 │   ├── utils/
 │   │   ├── log.ts            # 输出格式化(成功/错误/表格)
 │   │   └── fs.ts             # 安全文件操作
@@ -108,9 +108,8 @@ interface SettingsJson {
 
 **路径规范化**(`core/paths.ts`):
 
-- 默认:`path.resolve(input)`(相对当前 cwd 解析为绝对路径,不强制 `realpath`,避免符号链接/不存在路径报错)。
-- `--relative`:`path.relative(workspaceRoot, resolvedAbs)`(相对工作区根)。
-- 去重基于规范化后的字符串。
+- 统一用 `path.resolve(input)`(相对路径输入相对当前 cwd 解析为绝对路径;不强制 `realpath`,避免符号链接/不存在路径报错)。
+- 去重基于规范化后的(绝对路径)字符串。
 
 **工作区发现**(`core/config.ts`):
 
@@ -123,7 +122,7 @@ interface SettingsJson {
 | `settings.json` 非 JSON | 报错,保留原文件不动 |
 | `--root` / `CCWS_ROOT` 指向非目录或不可访问 | 报错退出 |
 | `init <name>` 已存在 | 报错;`--force` 覆盖 |
-| `add` 目录不存在 | 默认 warn 仍加入;`--strict` 拒绝退出非 0 |
+| `add` 任一目录不存在 | 整次操作失败、**不修改 settings.json**(原子性),列出无效路径,退出非 0 |
 | `add` 目录重复 | 去重,提示 "already associated" |
 | `remove` 目录未关联 | 提示 "not associated",非 0 退出 |
 | 未显式 `--workspace` 且 cwd 不在任何工作区内 | 报错,要求 `--workspace` 或 `cd` 进工作区 |
@@ -131,17 +130,17 @@ interface SettingsJson {
 | `open` 时 `claude` 不在 PATH | 报错并提示安装 Claude Code |
 | 任何未捕获错误 | 打印友好信息,退出码 1;`--debug` 打印堆栈 |
 
-退出码约定:成功 0;用户可恢复错误 1;`--strict` 校验失败 2。
+退出码约定:成功 0;任何用户可恢复错误(含目录不存在)1;未捕获异常 1。
 
 ## 8. 测试策略(vitest)
 
 - **core 单元**:
   - `settings.ts`:读/写/合并、保留未知字段、JSON 损坏时不覆盖、key 顺序。
-  - `paths.ts`:绝对/相对规范化、去重、边界(空、`.`、`..`)。
+  - `paths.ts`:规范化为绝对路径、去重、边界(空、`.`、`..`)。
   - `config.ts`:`$ROOT` 解析优先级、就近推断、工作区发现。
 - **commands 集成**(用临时目录作 `$ROOT`):
   - `init` 建目录与骨架、`--force` 覆盖、已存在报错。
-  - `add`/`remove` 改动文件系统 + 去重 + 输出。
+  - `add`/`remove` 改动文件系统 + 去重 + 输出;`add` 任一目录不存在 → 原子失败(断言 settings.json 未被修改)。
   - `list`/`status` 输出格式。
   - `open` 用 stub 替换 `claude`(避免真实启动),断言 `chdir` 与 spawn 参数。
 - **覆盖率目标**:≥ 80%。

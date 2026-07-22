@@ -1,0 +1,24 @@
+{
+  "name": "ccws",
+  "version": "0.1.0",
+  "description": "Manage Claude Code workspaces",
+  "type": "module",
+  "bin": {
+    "ccws": "./src/cli.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "bun build src/cli.ts --compile --outfile=dist/ccws",
+    "build:all": "bash scripts/build-all.sh"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.7.0",
+    "commander": "^15.0.0"
+  }
+}

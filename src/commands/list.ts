@@ -2,7 +2,7 @@ import { resolveRoot, discoverWorkspaces, settingsPath, workspacePath } from "..
 import { readSettings } from "../core/settings.js";
 import { existsSync } from "node:fs";
 import { workspaceExists } from "../core/workspace.js";
-import { info, error, warn } from "../utils/log.js";
+import { info } from "../utils/log.js";
 
 export interface ListOptions { root?: string }
 
@@ -11,7 +11,6 @@ export async function listAction(args: string[], opts: ListOptions): Promise<voi
   if (args.length > 0) {
     const name = args[0];
     if (!workspaceExists(root, name)) {
-      error(`workspace "${name}" does not exist`);
       throw new Error(`workspace "${name}" does not exist`);
     }
     const dirs = readSettings(settingsPath(root, name)).permissions?.additionalDirectories ?? [];

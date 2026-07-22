@@ -63,16 +63,24 @@ describe("cli", () => {
     await program.parseAsync(["node", "ccws", "ls", "-r", root]);
   });
 
-  it("wraps action failures: prints to stderr and exits non-zero", async () => {
+  it("wraps action failures: prints a SINGLE error line to stderr and exits non-zero", async () => {
     const program = buildCli();
     const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => {
       throw new Error("__cli_exit__");
     }) as never);
-    const errSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const errChunks: string[] = [];
+    const errSpy = vi.spyOn(process.stderr, "write").mockImplementation((c) => {
+      errChunks.push(String(c));
+      return true;
+    });
     await expect(
       program.parseAsync(["node", "ccws", "init", "bad/name", "-r", root]),
     ).rejects.toThrow("__cli_exit__");
-    expect(errSpy).toHaveBeenCalled();
+    const errText = errChunks.join("");
+    // Exactly one ✗ error line (no duplicate from the action calling error() before throw).
+    expect(errText.split("✗").length - 1).toBe(1);
+    // The single line carries the real failure message, not a generic label.
+    expect(errText).toMatch(/invalid.*name|name.*invalid/i);
     // process.exit was invoked with code 1.
     expect(exitSpy).toHaveBeenCalledWith(1);
     exitSpy.mockRestore();

@@ -24,4 +24,11 @@ describe("openAction", () => {
   it("throws when workspace missing", async () => {
     await expect(openAction("nope", { root, runner: () => {} })).rejects.toThrow(/does not exist/i);
   });
+  it("throws a helpful message when the runner fails to spawn claude", async () => {
+    await initAction("demo", { root });
+    const thrower = () => { throw new Error("spawn ENOENT"); };
+    // Single error path: action throws (cli.ts fail prints it); no separate error() log.
+    await expect(openAction("demo", { root, runner: thrower }))
+      .rejects.toThrow(/claude.*not found in PATH|install Claude Code/i);
+  });
 });

@@ -3,7 +3,7 @@ import { resolveRoot, settingsPath, workspacePath } from "../core/config.js";
 import { createWorkspace, workspaceExists, validateWorkspaceName } from "../core/workspace.js";
 import { assertAllExist, toAbsolute } from "../core/paths.js";
 import { writeAdditionalDirs } from "../core/settings.js";
-import { error, success } from "../utils/log.js";
+import { success } from "../utils/log.js";
 
 export interface InitOptions {
   root?: string;
@@ -57,8 +57,7 @@ export async function initAction(name: string, opts: InitOptions): Promise<void>
   try {
     createWorkspace(root, name);
   } catch (err) {
-    error((err as Error).message);
-    throw err;
+    throw new Error((err as Error).message);
   }
 
   if (opts.interactive) {
@@ -74,8 +73,7 @@ export async function initAction(name: string, opts: InitOptions): Promise<void>
     try {
       await collectAndWriteDirs(root, name, prompt);
     } catch (err) {
-      error((err as Error).message);
-      throw err;
+      throw new Error((err as Error).message);
     }
   }
 

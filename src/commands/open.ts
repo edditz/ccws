@@ -1,7 +1,6 @@
 import { spawn } from "node:child_process";
 import { resolveRoot, workspacePath } from "../core/config.js";
 import { workspaceExists } from "../core/workspace.js";
-import { error } from "../utils/log.js";
 
 export type Runner = (cmd: string, args: string[], opts: { cwd: string; stdio: "inherit" }) => void;
 
@@ -20,7 +19,6 @@ export async function openAction(name: string, opts: OpenOptions): Promise<void>
   try {
     runner("claude", [], { cwd: workspacePath(root, name), stdio: "inherit" });
   } catch {
-    error("`claude` not found in PATH — install Claude Code first");
-    throw new Error("claude not found in PATH");
+    throw new Error("`claude` not found in PATH — install Claude Code first");
   }
 }

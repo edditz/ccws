@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { mkdtempSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initAction } from "../../src/commands/init.js";
@@ -40,5 +40,23 @@ describe("statusAction", () => {
     vi.spyOn(process.stdout, "write").mockImplementation(() => true);
     await statusAction({ root, cwd: "/tmp" });
     expect(err.join("")).toMatch(/not inside|no workspace/i);
+  });
+
+  it("warns (does not throw) when cwd is in a non-workspace subdir of root", async () => {
+    // A real directory under <root> that is NOT a workspace (no .claude/settings.json).
+    // detectWorkspaceFromCwd would return its name, but workspaceExists must reject it.
+    const notAWorkspace = join(root, "just-a-folder");
+    mkdirSync(notAWorkspace, { recursive: true });
+    const err: string[] = [];
+    const out: string[] = [];
+    vi.spyOn(process.stderr, "write").mockImplementation((c) => { err.push(String(c)); return true; });
+    vi.spyOn(process.stdout, "write").mockImplementation((c) => { out.push(String(c)); return true; });
+    // Must NOT throw a misleading "settings.json not found — run ccws init" error.
+    await expect(statusAction({ root, cwd: notAWorkspace })).resolves.toBeUndefined();
+    const errText = err.join("");
+    const outText = out.join("");
+    // Either stream may carry the warning; union both and assert the intent.
+    expect(`${errText}${outText}`).toMatch(/not inside|no workspace/i);
+    expect(`${errText}${outText}`).not.toMatch(/settings\.json not found|run ccws init/i);
   });
 });

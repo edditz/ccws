@@ -1,29 +1,21 @@
 import { rmSync } from "node:fs";
 import { resolveRoot, workspacePath } from "../core/config.js";
-import { createWorkspace, workspaceExists } from "../core/workspace.js";
+import { createWorkspace, workspaceExists, validateWorkspaceName } from "../core/workspace.js";
 import { error, success } from "../utils/log.js";
 
 export interface InitOptions {
   root?: string;
   force?: boolean;
+  /**
+   * `--interactive` is a no-op here and is wired in Task 13 (needs
+   * @clack/prompts + dir picker). The option is declared so the CLI can accept
+   * the flag today; this command performs no interactive onboarding yet.
+   */
   interactive?: boolean;
 }
 
-const NAME_PATTERN = /[\\/]|^\.{1,2}$|\/\.{1,2}\//;
-
-function validateName(name: string): void {
-  if (!name || name.trim() === "") {
-    throw new Error('invalid workspace name: must be non-empty');
-  }
-  if (NAME_PATTERN.test(name) || name.includes("..")) {
-    throw new Error(
-      `invalid workspace name "${name}": must not contain path separators (/ or \\) or parent-dir segments (..)`,
-    );
-  }
-}
-
 export async function initAction(name: string, opts: InitOptions): Promise<void> {
-  validateName(name);
+  validateWorkspaceName(name);
 
   const root = resolveRoot(opts.root);
 
@@ -39,9 +31,4 @@ export async function initAction(name: string, opts: InitOptions): Promise<void>
   }
 
   success(`created workspace "${name}" at ${workspacePath(root, name)}`);
-
-  // --interactive is wired in Task 13 (needs @clack/prompts + dir picker); no-op here.
-  if (opts.interactive) {
-    // reserved for interactive onboarding wizard
-  }
 }

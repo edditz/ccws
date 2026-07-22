@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { mkdtempSync, rmSync, existsSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initAction } from "../../src/commands/init.js";
-import { workspaceExists, createWorkspace } from "../../src/core/workspace.js";
+import { workspaceExists } from "../../src/core/workspace.js";
 import { settingsPath, workspacePath } from "../../src/core/config.js";
 
 let root: string;
@@ -21,9 +21,17 @@ describe("initAction", () => {
     await expect(initAction("demo", { root })).rejects.toThrow(/exists|force/i);
   });
 
-  it("overwrites with --force", async () => {
+  it("overwrites with --force (resets settings.json back to skeleton)", async () => {
     await initAction("demo", { root });
-    await expect(initAction("demo", { root, force: true })).resolves.not.toThrow();
+    // Corrupt the settings.json so we can prove --force resets it.
+    const settings = settingsPath(root, "demo");
+    writeFileSync(settings, JSON.stringify({ permissions: { additionalDirectories: ["/sneaky/path"] } }, null, 2), "utf8");
+    expect(JSON.parse(readFileSync(settings, "utf8")).permissions.additionalDirectories).toEqual(["/sneaky/path"]);
+
+    await initAction("demo", { root, force: true });
+
+    const after = JSON.parse(readFileSync(settings, "utf8"));
+    expect(after.permissions.additionalDirectories).toEqual([]);
   });
 
   it("rejects names containing a path separator (path traversal guard)", async () => {
@@ -41,6 +49,13 @@ describe("initAction", () => {
     await expect(initAction("../evil", { root })).rejects.toThrow(/invalid.*name|name.*invalid/i);
     expect(existsSync(join(root, "evil"))).toBe(false);
     expect(existsSync(join(tmpdir(), "evil"))).toBe(false);
+  });
+
+  it("accepts the literal name 'a..b' (regression: adjacent dots are not path traversal)", async () => {
+    await initAction("a..b", { root });
+    expect(workspaceExists(root, "a..b")).toBe(true);
+    const raw = JSON.parse(readFileSync(settingsPath(root, "a..b"), "utf8"));
+    expect(raw.permissions.additionalDirectories).toEqual([]);
   });
 
   it("rejects empty / whitespace-only names", async () => {

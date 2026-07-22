@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { mkdtempSync, writeFileSync, readFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readSettings, writeAdditionalDirs } from "../../src/core/settings.js";
+import { readSettings, writeAdditionalDirs, setAdditionalDirs } from "../../src/core/settings.js";
 
 let dir: string;
 let settingsFile: string;
@@ -56,5 +56,45 @@ describe("writeAdditionalDirs", () => {
     const raw = JSON.parse(readFileSync(settingsFile, "utf8"));
     expect(raw.permissions.additionalDirectories).toEqual(["/x"]);
     expect(raw.model).toBe("opus");
+  });
+  it("throws on corrupt JSON without overwriting (aligns with readSettings)", () => {
+    writeFileSync(settingsFile, "{ not json");
+    expect(() => writeAdditionalDirs(settingsFile, ["/x"])).toThrow(/corrupt|parse/i);
+    expect(readFileSync(settingsFile, "utf8")).toBe("{ not json");
+  });
+});
+
+describe("setAdditionalDirs", () => {
+  it("replaces the full list, preserving other fields", () => {
+    writeFileSync(settingsFile, JSON.stringify({ model: "opus", permissions: { additionalDirectories: ["/old"], keep: 1 } }));
+    setAdditionalDirs(settingsFile, ["/a", "/b"]);
+    const raw = JSON.parse(readFileSync(settingsFile, "utf8"));
+    expect(raw.permissions.additionalDirectories).toEqual(["/a", "/b"]);
+    expect(raw.model).toBe("opus");
+    expect(raw.permissions.keep).toBe(1);
+  });
+  it("dedupes the input list", () => {
+    writeFileSync(settingsFile, JSON.stringify({ permissions: { additionalDirectories: ["/old"] } }));
+    setAdditionalDirs(settingsFile, ["/a", "/a", "/b"]);
+    const raw = JSON.parse(readFileSync(settingsFile, "utf8"));
+    expect(raw.permissions.additionalDirectories).toEqual(["/a", "/b"]);
+  });
+  it("creates the file when it does not exist", () => {
+    const missing = join(dir, ".claude", "fresh.json");
+    setAdditionalDirs(missing, ["/a", "/b"]);
+    const raw = JSON.parse(readFileSync(missing, "utf8"));
+    expect(raw.permissions.additionalDirectories).toEqual(["/a", "/b"]);
+  });
+  it("adds permissions when settings lacks them", () => {
+    writeFileSync(settingsFile, JSON.stringify({ model: "opus" }));
+    setAdditionalDirs(settingsFile, ["/x"]);
+    const raw = JSON.parse(readFileSync(settingsFile, "utf8"));
+    expect(raw.permissions.additionalDirectories).toEqual(["/x"]);
+    expect(raw.model).toBe("opus");
+  });
+  it("throws on corrupt JSON without overwriting (aligns with readSettings)", () => {
+    writeFileSync(settingsFile, "{ not json");
+    expect(() => setAdditionalDirs(settingsFile, ["/x"])).toThrow(/corrupt|parse/i);
+    expect(readFileSync(settingsFile, "utf8")).toBe("{ not json");
   });
 });

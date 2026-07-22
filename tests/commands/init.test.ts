@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { initAction } from "../../src/commands/init.js";
 import { workspaceExists } from "../../src/core/workspace.js";
-import { settingsPath, workspacePath } from "../../src/core/config.js";
+import { settingsPath } from "../../src/core/config.js";
 
 let root: string;
 beforeEach(() => { root = mkdtempSync(join(tmpdir(), "ccws-root-")); });
@@ -69,8 +69,36 @@ describe("initAction", () => {
     expect(existsSync(root)).toBe(before === "true");
   });
 
-  it("--interactive is a no-op (still creates the workspace)", async () => {
-    await initAction("demo", { root, interactive: true });
+  it("--interactive with no dirs entered still creates the workspace", async () => {
+    // Inject a prompt that immediately finishes (empty input) so the test never
+    // touches the TTY. The real @clack/prompts text is wired in cli.ts.
+    const promptText = async () => "";
+    await initAction("demo", { root, interactive: true, promptText });
     expect(workspaceExists(root, "demo")).toBe(true);
+    expect(
+      JSON.parse(readFileSync(settingsPath(root, "demo"), "utf8")).permissions.additionalDirectories,
+    ).toEqual([]);
+  });
+
+  it("--interactive collects, validates, and writes entered dirs", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "real-"));
+    const answers = [dir, ""];
+    let i = 0;
+    const promptText = async () => answers[i++] ?? "";
+    await initAction("demo", { root, interactive: true, promptText });
+    const written = JSON.parse(readFileSync(settingsPath(root, "demo"), "utf8"))
+      .permissions.additionalDirectories as string[];
+    expect(written).toEqual([resolve(dir)]);
+  });
+
+  it("--interactive rejects dirs that do not exist (atomic — nothing written)", async () => {
+    const answers = ["/does/not/exist/one", ""];
+    let i = 0;
+    const promptText = async () => answers[i++] ?? "";
+    await expect(initAction("demo", { root, interactive: true, promptText }))
+      .rejects.toThrow(/not exist/i);
+    const written = JSON.parse(readFileSync(settingsPath(root, "demo"), "utf8"))
+      .permissions.additionalDirectories as string[];
+    expect(written).toEqual([]);
   });
 });

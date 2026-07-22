@@ -106,15 +106,24 @@ export function buildCli(): Command {
 // True only when this module is the entry point (e.g. `bin/ccws`, `bun src/cli.ts`,
 // or the compiled binary). Comparing the resolved real paths avoids false
 // positives from symlinks, cwd-relative argv, or a bare "cli.ts" substring.
+//
+// In a `bun build --compile` binary, argv[1] and import.meta.url both point at
+// a virtual bunfs path (e.g. "/$bunfs/root/cli") that does not exist on disk,
+// so realpathSync throws. When that happens we fall back to a direct string
+// comparison — the virtual path is stable for a given entry, so equality there
+// reliably indicates "this module is the binary's entry point".
 const isMain = (): boolean => {
   const entry = process.argv[1];
   if (!entry) return false;
+  const metaPath = new URL(import.meta.url).pathname;
   try {
     const a = realpathSync(entry);
-    const b = realpathSync(new URL(import.meta.url).pathname);
+    const b = realpathSync(metaPath);
     return a === b;
   } catch {
-    return false;
+    // realpath failed — virtual (compiled) or otherwise. Compare raw paths so
+    // the compiled binary still parses argv.
+    return entry === metaPath;
   }
 };
 

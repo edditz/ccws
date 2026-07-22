@@ -8,8 +8,13 @@ dist/
 # test coverage
 coverage/
 
+# claude code local settings & SDD scratch (do not commit)
+.claude/settings.local.json
+.superpowers/
+
 # bun
 .bun/
+.*.bun-build
 
 # logs
 *.log

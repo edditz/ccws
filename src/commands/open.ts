@@ -1,11 +1,25 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { resolveRoot, workspacePath } from "../core/config.js";
 import { workspaceExists } from "../core/workspace.js";
+import * as log from "../utils/log.js";
 
-export type Runner = (cmd: string, args: string[], opts: { cwd: string; stdio: "inherit" }) => void;
+// Injected runners may return void (tests) or a ChildProcess (production defaultRunner)
+// so the default runner can attach an async "error" listener for spawn failures that
+// try/catch cannot reach (ENOENT after spawn is synchronous, but EPERM/EACCES/crash
+// arrive as an asynchronous "error" event).
+export type Runner = (
+  cmd: string,
+  args: string[],
+  opts: { cwd: string; stdio: "inherit" },
+) => ChildProcess | void;
 
 const defaultRunner: Runner = (cmd, args, opts) => {
-  spawn(cmd, args, opts);
+  const child = spawn(cmd, args, opts);
+  child.on("error", () => {
+    log.error("`claude` failed to start — not found in PATH or crashed; install Claude Code first");
+    process.exit(1);
+  });
+  return child;
 };
 
 export interface OpenOptions { root?: string; runner?: Runner }

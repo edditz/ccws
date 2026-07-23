@@ -4,9 +4,29 @@ Manage Claude Code workspaces. A workspace is an empty folder whose
 `.claude/settings.json` `permissions.additionalDirectories` links multiple
 external directories; opening it in Claude Code gives access to all of them.
 
-## Install (single-file binary)
+## Install
 
-Download the matching binary from `dist/` (or build: `bun run build:all`).
+**One-line install** (macOS / Linux / WSL — downloads the right binary from
+GitHub Releases, verifies checksum, installs to `~/.local/bin`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/<owner>/ccws/main/scripts/install.sh \
+  | sh -s -- --repo <owner>/ccws
+```
+
+Override the install dir, version, or repo with `--bin` / `--version` / `--repo`,
+or the `CCWS_INSTALL_DIR` / `CCWS_VERSION` / `CCWS_REPO` env vars.
+
+**Manual download**: grab the matching `ccws-<os>-<arch>` binary from the latest
+[Release](../../releases/latest), `chmod +x`, put it on your `PATH`.
+
+**Build from source**:
+
+```bash
+bun install
+bun run build          # current-platform binary → dist/ccws
+bun run build:all      # all 5 targets → dist/
+```
 
 ## Usage
 

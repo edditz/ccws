@@ -7,6 +7,7 @@ import { listAction } from "./commands/list.js";
 import { statusAction } from "./commands/status.js";
 import { openAction } from "./commands/open.js";
 import { error } from "./utils/log.js";
+import pkg from "../package.json" with { type: "json" };
 
 const rootOption = (): Option =>
   new Option("-r, --root <path>", "override convention root $ROOT");
@@ -21,7 +22,7 @@ export function buildCli(): Command {
   program
     .name("ccws")
     .description("Manage Claude Code workspaces")
-    .version("1.0.0");
+    .version(pkg.version);
 
   program
     .command("init <name>")

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { buildCli } from "../src/cli.js";
 import { settingsPath } from "../src/core/config.js";
+import pkg from "../package.json" with { type: "json" };
 
 let root: string;
 beforeEach(() => {
@@ -39,7 +40,7 @@ describe("cli", () => {
 
   it("reports a version", () => {
     const program = buildCli();
-    expect(program.version()).toBe("1.0.0");
+    expect(program.version()).toBe(pkg.version);
   });
 
   it("wires `init <name>` through commander and forwards --root", async () => {

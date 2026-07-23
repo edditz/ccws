@@ -42,6 +42,7 @@ CLI 子命令:`init`(含 `-i/--interactive`、`-f/--force`)、`add`、`remove`�
 - **fail-fast**:workspace 不存在 → 报错引导 `init`,不隐式创建。
 - **输出纪律**:源码除 `utils/log.ts` 外**禁用 `console.log`**;命令失败只 `throw`(由 cli.ts 的 `fail` 统一打印,不要在 action 里再调 `error()` 否则双重日志)。
 - **不可变**:不修改入参,构造新对象。
+- **版本号单一来源**:`package.json` 的 `version` 是唯一真值;`src/cli.ts` 与测试通过 import attributes(`import pkg from "../package.json" with { type: "json" }`)读取,禁止硬编码版本字符串。改版本只动 `package.json` 一处。
 
 ## 测试惯例
 

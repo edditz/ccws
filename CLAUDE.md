@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目
 
-`ccws` 管理 Claude Code **工作区**:一个空文件夹,通过其 `.claude/settings.json` 的 `permissions.additionalDirectories` 关联多个外部目录;在该文件夹启动 claude 即可访问全部关联目录。约定根 `$ROOT`(默认 `~/ccws/`)下每个子目录是一个工作区,**无中心索引**,靠扫描 `$ROOT` 发现。
+`ccws` 管理 Claude Code **工作区**:一个空文件夹,通过其 `.claude/settings.json` 的 `permissions.additionalDirectories` 关联多个外部目录;在该文件夹启动 claude 即可访问全部关联目录。约定根 `$ROOT`(默认 `~/.ccws/`)下每个子目录是一个工作区,**无中心索引**,靠扫描 `$ROOT` 发现。
 
 ## 常用命令
 
@@ -20,7 +20,7 @@ bun run build                            # 当前平台单文件 binary → dist
 bun run build:all                        # 全平台矩阵(darwin/linux/windows)
 ```
 
-CLI 子命令:`init`(含 `-i/--interactive`、`-f/--force`)、`add`、`remove`、`list`(别名 `ls`)、`status`、`open`。全局 `-r/--root <path>` 覆盖 `$ROOT`(优先级 `--root` > `CCWS_ROOT` 环境变量 > `~/ccws/`)。
+CLI 子命令:`init`(含 `-i/--interactive`、`-f/--force`)、`add`、`remove`、`list`(别名 `ls`)、`status`、`open`。全局 `-r/--root <path>` 覆盖 `$ROOT`(优先级 `--root` > `CCWS_ROOT` 环境变量 > `~/.ccws/`)。
 
 ## 架构
 

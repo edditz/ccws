@@ -11,7 +11,7 @@ Download the matching binary from `dist/` (or build: `bun run build:all`).
 ## Usage
 
 ```bash
-ccws init my-work                      # create workspace under ~/ccws/
+ccws init my-work                      # create workspace under ~/.ccws/
 ccws add ~/projects/web ~/projects/api -w my-work
 ccws list                              # list all workspaces
 ccws list my-work                      # show my-work's directories
@@ -20,7 +20,7 @@ ccws open my-work                      # launch claude in my-work
 ccws remove ~/projects/web -w my-work
 ```
 
-Convention root `$ROOT` defaults to `~/ccws/`; override with `--root <path>`
+Convention root `$ROOT` defaults to `~/.ccws/`; override with `--root <path>`
 or `CCWS_ROOT` env var.
 
 ## Development

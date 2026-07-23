@@ -20,7 +20,7 @@ Claude Code 支持通过 `.claude/settings.json` 的 `permissions.additionalDire
 ## 2. 核心概念
 
 - **工作区(Workspace)**:约定根目录下的一个子目录 `$ROOT/<name>/`,内含 `.claude/settings.json`,其 `permissions.additionalDirectories: string[]` 列出关联的外部目录。
-- **约定根(Convention Root)`$ROOT`**:所有工作区的统一存放处,默认 `~/ccws/`,可被环境变量 `CCWS_ROOT` 或全局 `--root <path>` 覆盖。
+- **约定根(Convention Root)`$ROOT`**:所有工作区的统一存放处,默认 `~/.ccws/`,可被环境变量 `CCWS_ROOT` 或全局 `--root <path>` 覆盖。
 - **工作区发现**:扫描 `$ROOT` 下每个含 `.claude/settings.json` 的一级子目录。
 - **就近推断**:当命令未显式指定 `--workspace <name>` 时,若当前 cwd 位于 `$ROOT/<x>/` 内(含其子孙),则默认操作工作区 `<x>`;否则要求显式指定 `--workspace`。
 
@@ -35,7 +35,7 @@ Claude Code 支持通过 `.claude/settings.json` 的 `permissions.additionalDire
 | `ccws status` | 按 cwd 就近判断当前工作区,显示其关联目录与有效性;不在任何工作区内则提示。 |
 | `ccws open <name>` | `process.chdir('$ROOT/<name>')` 后 `spawn('claude', { stdio: 'inherit' })`,继承终端。 |
 
-全局选项:`-r, --root <path>`(覆盖 `$ROOT`)、`-V, --version`、`-h, --help`。`$ROOT` 解析优先级:命令行 `--root` > 环境变量 `CCWS_ROOT` > 默认 `~/ccws/`。
+全局选项:`-r, --root <path>`(覆盖 `$ROOT`)、`-V, --version`、`-h, --help`。`$ROOT` 解析优先级:命令行 `--root` > 环境变量 `CCWS_ROOT` > 默认 `~/.ccws/`。
 
 ## 4. 非目标(YAGNI)
 
@@ -64,7 +64,7 @@ ccws/
 │   │   ├── status.ts
 │   │   └── open.ts
 │   ├── core/
-│   │   ├── config.ts         # $ROOT 解析(--root > CCWS_ROOT > ~/ccws)、就近推断、工作区发现(扫描)
+│   │   ├── config.ts         # $ROOT 解析(--root > CCWS_ROOT > ~/.ccws)、就近推断、工作区发现(扫描)
 │   │   ├── workspace.ts      # 工作区 CRUD(建目录 + 生成 settings.json 骨架)
 │   │   ├── settings.ts       # .claude/settings.json 读写:保留其余字段,仅合并 additionalDirectories
 │   │   └── paths.ts          # 路径规范化(→绝对路径)、存在性校验、去重

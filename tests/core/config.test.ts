@@ -23,8 +23,8 @@ describe("resolveRoot", () => {
     process.env.CCWS_ROOT = root;
     expect(resolveRoot(undefined)).toBe(root);
   });
-  it("defaults to ~/ccws", () => {
-    expect(resolveRoot(undefined)).toBe(join(process.env.HOME ?? "/tmp", "ccws"));
+  it("defaults to ~/.ccws", () => {
+    expect(resolveRoot(undefined)).toBe(join(process.env.HOME ?? "/tmp", ".ccws"));
   });
 });
 

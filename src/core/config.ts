@@ -8,7 +8,7 @@ import type { Workspace } from "../types.js";
 export function resolveRoot(cliRoot?: string): string {
   if (cliRoot) return resolve(cliRoot);
   if (process.env.CCWS_ROOT) return resolve(process.env.CCWS_ROOT);
-  return join(homedir(), "ccws");
+  return join(homedir(), ".ccws");
 }
 
 export function workspacePath(root: string, name: string): string {

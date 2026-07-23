@@ -3,9 +3,9 @@
 # ccws installer — downloads the right single-file binary from GitHub Releases.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/<owner>/ccws/main/scripts/install.sh | sh -s -- --repo <owner>/ccws
-#   CCWS_REPO=<owner>/ccws curl -fsSL .../install.sh | sh
-#   curl -fsSL .../install.sh | sh -s -- --repo <owner>/ccws --version v0.1.0 --bin /usr/local/bin
+#   curl -fsSL https://raw.githubusercontent.com/edditz/ccws/main/scripts/install.sh | sh -s -- --repo edditz/ccws
+#   CCWS_REPO=edditz/ccws curl -fsSL .../install.sh | sh
+#   curl -fsSL .../install.sh | sh -s -- --repo edditz/ccws --version v0.1.0 --bin /usr/local/bin
 #
 # Options:
 #   --repo <owner/repo>   GitHub repo hosting releases (or CCWS_REPO env)
@@ -31,7 +31,7 @@ done
 
 if [ -z "$REPO" ]; then
   echo "error: --repo <owner/repo> (or CCWS_REPO env) is required" >&2
-  echo "  curl -fsSL .../install.sh | sh -s -- --repo <owner>/ccws" >&2
+  echo "  curl -fsSL .../install.sh | sh -s -- --repo edditz/ccws" >&2
   exit 1
 fi
 

@@ -10,8 +10,8 @@ external directories; opening it in Claude Code gives access to all of them.
 GitHub Releases, verifies checksum, installs to `~/.local/bin`):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<owner>/ccws/main/scripts/install.sh \
-  | sh -s -- --repo <owner>/ccws
+curl -fsSL https://raw.githubusercontent.com/edditz/ccws/main/scripts/install.sh \
+  | sh -s -- --repo edditz/ccws
 ```
 
 Override the install dir, version, or repo with `--bin` / `--version` / `--repo`,

@@ -21,7 +21,7 @@ export function buildCli(): Command {
   program
     .name("ccws")
     .description("Manage Claude Code workspaces")
-    .version("0.1.0");
+    .version("1.0.0");
 
   program
     .command("init <name>")

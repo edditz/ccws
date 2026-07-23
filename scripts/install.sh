@@ -5,7 +5,7 @@
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/edditz/ccws/main/scripts/install.sh | sh -s -- --repo edditz/ccws
 #   CCWS_REPO=edditz/ccws curl -fsSL .../install.sh | sh
-#   curl -fsSL .../install.sh | sh -s -- --repo edditz/ccws --version v0.1.0 --bin /usr/local/bin
+#   curl -fsSL .../install.sh | sh -s -- --repo edditz/ccws --version v1.0.0 --bin /usr/local/bin
 #
 # Options:
 #   --repo <owner/repo>   GitHub repo hosting releases (or CCWS_REPO env)

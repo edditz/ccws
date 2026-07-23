@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ccws — the workspace layer for Claude Code</title>
+<meta name="description" content="ccws binds scattered directories into one folder whose Claude Code session sees them all. A single-file CLI for macOS, Linux, and WSL.">
+<meta name="color-scheme" content="dark">
+<meta property="og:title" content="ccws — the workspace layer for Claude Code">
+<meta property="og:description" content="One empty folder links every directory you're working in. Open it in Claude Code — get all of them at once.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230f0d0b'/%3E%3Crect x='7' y='7' width='18' height='18' fill='none' stroke='%23e8a04c' stroke-width='1.5'/%3E%3Crect x='13' y='13' width='6' height='6' fill='%23e8a04c'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="nav">
+  <a class="brand" href="#top"><span class="mark" aria-hidden="true">▣</span>ccws</a>
+  <nav class="nav-links">
+    <a href="#concept">concept</a>
+    <a href="#commands">commands</a>
+    <a href="#install">install</a>
+    <span class="pill" data-version>v__VERSION__</span>
+    <a class="gh" href="https://github.com/edditz/ccws" title="GitHub" aria-label="GitHub">
+      <svg viewBox="0 0 16 16" width="17" height="17" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+    </a>
+  </nav>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="kicker reveal">claude&nbsp;code&nbsp;·&nbsp;workspace&nbsp;manager</p>
+      <h1 class="reveal">The <em>workspace</em> layer<br>for Claude&nbsp;Code.</h1>
+      <p class="lede reveal">Bind scattered directories into a single folder. Open it in Claude Code and the whole project is in scope — no flags, no <code>--add-dir</code> rituals, no JSON by hand.</p>
+      <div class="cmd reveal" id="cmd">
+        <span class="prompt" aria-hidden="true">$</span>
+        <code>curl -fsSL https://raw.githubusercontent.com/edditz/ccws/main/scripts/install.sh | sh -s -- --repo edditz/ccws</code>
+        <button class="copy" data-copy="cmd" aria-label="Copy install command">copy</button>
+      </div>
+      <p class="hint reveal">single-file binary&nbsp;·&nbsp;macOS / Linux / WSL&nbsp;·&nbsp;no Node required</p>
+    </div>
+    <div class="hero-art reveal" aria-hidden="true">
+      <pre class="tree"><span class="p">~/projects/web  </span> <span class="b">─┐</span>
+<span class="p">~/projects/api  </span> <span class="b">─┤</span>
+<span class="p">~/notes/research</span> <span class="b">─┼──▶</span>  <span class="r">~/.ccws/my-work/</span>
+<span class="p">~/labs/exp      </span> <span class="b">─┤</span>
+<span class="p">~/design/system </span> <span class="b">─┘</span></pre>
+    </div>
+  </section>
+
+  <section id="concept" class="section">
+    <div class="section-head reveal">
+      <span class="num">01</span>
+      <h2>What's a <em>workspace?</em></h2>
+    </div>
+    <div class="concept-grid">
+      <div class="prose reveal">
+        <p>A workspace is just an empty folder. ccws drops a <code>.claude/settings.json</code> into it that points at the real directories you care about, via <code>permissions.additionalDirectories</code>.</p>
+        <p>Launch Claude Code inside that folder and every linked directory joins the session. Move a file from <code>~/projects/web</code> into <code>~/projects/api</code>; both are in scope. ccws is the wiring — you never touch the JSON.</p>
+        <ul class="facts">
+          <li><b>No registry.</b> Workspaces are plain folders under <code>~/.ccws/</code>; discovery is a directory scan.</li>
+          <li><b>Absolute paths only.</b> Stored normalized, deduped, validated. <code>add</code> fails atomically if any path is missing.</li>
+          <li><b>Field-safe.</b> Your other <code>settings.json</code> keys are preserved on every write; corrupt JSON is never overwritten.</li>
+        </ul>
+      </div>
+      <div class="diagram reveal">
+<pre class="tree big"><span class="r">~/.ccws/my-work/</span>
+<span class="b">├─</span> <span class="d">.claude/</span>
+<span class="b">│  └─</span> <span class="d">settings.json</span>
+<span class="b">│     └─</span> <span class="d">permissions</span>
+<span class="b">│        └─</span> <span class="a">additionalDirectories</span>
+<span class="b">│           ├─</span> /Users/you/projects/web
+<span class="b">│           ├─</span> /Users/you/projects/api
+<span class="b">│           ├─</span> /Users/you/notes/research
+<span class="b">│           └─</span> /Users/you/labs/exp
+<span class="b">└─</span> <span class="dim">open claude here → everything above is in scope</span></pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="commands" class="section">
+    <div class="section-head reveal">
+      <span class="num">02</span>
+      <h2>Six <em>commands.</em></h2>
+    </div>
+    <div class="terminal reveal">
+      <div class="term-chrome">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="term-title">~/my-work</span>
+      </div>
+      <div class="term-tabs" role="tablist">
+        <button class="tab active" data-tab="init" role="tab">init</button>
+        <button class="tab" data-tab="add" role="tab">add</button>
+        <button class="tab" data-tab="list" role="tab">list</button>
+        <button class="tab" data-tab="status" role="tab">status</button>
+        <button class="tab" data-tab="open" role="tab">open</button>
+        <button class="tab" data-tab="remove" role="tab">remove</button>
+      </div>
+      <div class="term-body">
+        <div class="pane active" data-pane="init">
+          <div class="line in"><span class="prompt">$</span> ccws init my-work</div>
+          <div class="line out ok">✓ created workspace "my-work" at ~/.ccws/my-work</div>
+        </div>
+        <div class="pane" data-pane="add">
+          <div class="line in"><span class="prompt">$</span> ccws add ~/projects/web ~/projects/api -w my-work</div>
+          <div class="line out ok">✓ added 2 directories to "my-work"</div>
+        </div>
+        <div class="pane" data-pane="list">
+          <div class="line in"><span class="prompt">$</span> ccws list</div>
+          <div class="line out">my-work<span class="dim">…………</span>2 dir(s)</div>
+          <div class="line out">research<span class="dim">………</span>1 dir(s)</div>
+        </div>
+        <div class="pane" data-pane="status">
+          <div class="line in"><span class="prompt">$</span> ccws status</div>
+          <div class="line out">workspace: my-work<span class="dim">  (~/.ccws/my-work)</span></div>
+          <div class="line out ok">&nbsp;&nbsp;✓&nbsp;&nbsp;/Users/you/projects/web</div>
+          <div class="line out ok">&nbsp;&nbsp;✓&nbsp;&nbsp;/Users/you/projects/api</div>
+        </div>
+        <div class="pane" data-pane="open">
+          <div class="line in"><span class="prompt">$</span> ccws open my-work</div>
+          <div class="line out a">entering workspace… claude launched in ~/.ccws/my-work</div>
+        </div>
+        <div class="pane" data-pane="remove">
+          <div class="line in"><span class="prompt">$</span> ccws remove ~/projects/web -w my-work</div>
+          <div class="line out ok">✓ removed 1 directory from "my-work"</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install" class="section">
+    <div class="section-head reveal">
+      <span class="num">03</span>
+      <h2>Get <em>ccws.</em></h2>
+    </div>
+    <div class="install-grid">
+      <article class="install-card reveal">
+        <h3>One-line install</h3>
+        <p>Detects your platform, verifies the SHA-256 checksum, installs to <code>~/.local/bin</code>.</p>
+        <div class="cmd small" data-copyable>
+          <span class="prompt" aria-hidden="true">$</span>
+          <code>curl -fsSL https://raw.githubusercontent.com/edditz/ccws/main/scripts/install.sh | sh</code>
+        </div>
+      </article>
+      <article class="install-card reveal">
+        <h3>Manual binary</h3>
+        <p>Grab <code>ccws-&lt;os&gt;-&lt;arch&gt;</code> from the latest release, <code>chmod +x</code>, put it on your <code>PATH</code>.</p>
+        <a class="link" href="https://github.com/edditz/ccws/releases/latest">releases / latest →</a>
+      </article>
+      <article class="install-card reveal">
+        <h3>From source</h3>
+        <p><code>bun install</code> then <code>bun run build</code>. Or run it straight from source with <code>bun run src/cli.ts &lt;cmd&gt;</code>.</p>
+        <a class="link" href="https://github.com/edditz/ccws">view source →</a>
+      </article>
+    </div>
+    <p class="platforms reveal"><span class="dim">targets&nbsp;·</span>&nbsp;darwin&nbsp;<span class="dim">arm64 · x64</span>&nbsp;&nbsp;<span class="dim">|</span>&nbsp;&nbsp;linux&nbsp;<span class="dim">x64 · arm64</span>&nbsp;&nbsp;<span class="dim">|</span>&nbsp;&nbsp;windows&nbsp;<span class="dim">x64</span></p>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="foot-inner">
+    <span class="foot-brand"><span class="mark" aria-hidden="true">▣</span> ccws&nbsp;&nbsp;<span class="dim" data-version>v__VERSION__</span></span>
+    <nav class="foot-nav">
+      <a href="https://github.com/edditz/ccws">github</a>
+      <a href="https://github.com/edditz/ccws/releases">releases</a>
+      <a href="https://github.com/edditz/ccws/blob/main/README.md">docs</a>
+    </nav>
+    <span class="sig">manage Claude Code workspaces</span>
+  </div>
+</footer>
+
+<script src="./main.js"></script>
+</body>
+</html>

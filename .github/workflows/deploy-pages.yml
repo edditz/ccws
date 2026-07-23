@@ -1,0 +1,55 @@
+name: deploy-pages
+
+# Publishes the static site in `site/` to GitHub Pages on every version tag,
+# and on manual dispatch. The current tag name is injected into the page.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write # required by actions/deploy-pages
+
+# One in-flight deployment at a time.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build site
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo "v=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "v=v$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Inject version into the page
+        run: sed -i "s/__VERSION__/${{ steps.ver.outputs.v }}/g" site/index.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    name: deploy to pages
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

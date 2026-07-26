@@ -77,15 +77,24 @@ export async function replaceBinaryFor(
     try {
       await writeFile(target, bytes);
     } catch (err) {
-      await rename(old, target); // never leave target missing
+      try {
+        await rename(old, target); // never leave target missing
+      } catch {
+        // best-effort recovery — don't mask the original error
+      }
       throw err;
     }
     await safeUnlink(old);
   } else {
     const tmp = join(dirname(target), `.ccws-update.${process.pid}.tmp`);
-    await writeFile(tmp, bytes);
-    await chmod(tmp, 0o755);
-    await rename(tmp, target);
+    try {
+      await writeFile(tmp, bytes);
+      await chmod(tmp, 0o755);
+      await rename(tmp, target);
+    } catch (err) {
+      await safeUnlink(tmp); // don't leak the temp file on failure
+      throw err;
+    }
   }
 }
 
@@ -119,7 +128,13 @@ export async function updateAction(
   const apiUrl = `https://api.github.com/repos/${repo}/releases/latest`;
   const apiRes = await deps.fetch(apiUrl, { headers: ghHeaders(current) });
   if (apiRes.status === 403) {
-    throw new Error("GitHub API rate limit hit — wait and retry, or run from a different IP");
+    const remaining = apiRes.headers.get("x-ratelimit-remaining");
+    if (remaining === "0") {
+      throw new Error("GitHub API rate limit hit — wait and retry, or run from a different IP");
+    }
+    throw new Error(
+      `GitHub API returned 403 for ${repo} — access restricted (private repo or org policy); check --repo and repo visibility`,
+    );
   }
   if (!apiRes.ok) {
     throw new Error(`failed to fetch latest release: ${apiRes.status} ${apiRes.statusText}`);

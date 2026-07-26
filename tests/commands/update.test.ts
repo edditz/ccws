@@ -10,8 +10,11 @@ import {
   type UpdateDeps,
 } from "../../src/commands/update.js";
 
-const jsonRes = (status: number, body: unknown) =>
-  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+const jsonRes = (status: number, body: unknown, headers: Record<string, string> = {}) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json", ...headers },
+  });
 const bytesRes = (status: number, bytes: Uint8Array) => new Response(bytes as BodyInit, { status });
 const textRes = (status: number, text: string) => new Response(text, { status });
 
@@ -25,6 +28,7 @@ interface MakeArgs {
   arch?: string;
   execPath?: string;
   apiStatus?: number;        // explicit status for /releases/latest
+  apiRateLimited?: boolean;  // when apiStatus===403, set x-ratelimit-remaining: 0 (default true)
   assetStatus?: number;      // explicit status for the asset download
   checksumsStatus?: number;  // explicit status for checksums.txt
 }
@@ -45,7 +49,10 @@ function makeDeps(args: MakeArgs) {
       if (u.includes("/releases/latest")) {
         const status = args.apiStatus ?? 200;
         const body = args.apiStatus === undefined ? { tag_name: args.tag } : {};
-        return jsonRes(status, body);
+        const headers: Record<string, string> = status === 403 && (args.apiRateLimited ?? true)
+          ? { "x-ratelimit-remaining": "0" }
+          : {};
+        return jsonRes(status, body, headers);
       }
       if (u.includes("/releases/download/") && u.endsWith(`/${asset}`)) {
         return bytesRes(args.assetStatus ?? 200, bytes);
@@ -191,6 +198,10 @@ describe("updateAction — API errors", () => {
   it("403 → rate-limit message", async () => {
     const { deps } = makeDeps({ tag: "v1.0.0", apiStatus: 403 });
     await expect(updateAction({ env: {} }, deps)).rejects.toThrow(/rate limit/i);
+  });
+  it("403 without rate-limit header → access-restricted message", async () => {
+    const { deps } = makeDeps({ tag: "v1.0.0", apiStatus: 403, apiRateLimited: false });
+    await expect(updateAction({ env: {} }, deps)).rejects.toThrow(/access restricted|403|private repo/i);
   });
   it("500 → generic fetch-failure message", async () => {
     const { deps } = makeDeps({ tag: "v1.0.0", apiStatus: 500 });

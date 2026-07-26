@@ -9,6 +9,14 @@ import {
   replaceBinaryFor,
   type UpdateDeps,
 } from "../../src/commands/update.js";
+import pkg from "../../package.json" with { type: "json" };
+
+// Fixture versions are derived from the current version, so the suite survives
+// a version bump without hand-editing tags: NEWER is always one patch above
+// current, SAME is exactly current.
+const [MAJ, MIN, PAT] = pkg.version.split(".").map(Number);
+const NEWER = `v${MAJ}.${MIN}.${PAT + 1}`;
+const SAME = `v${pkg.version}`;
 
 const jsonRes = (status: number, body: unknown, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), {
@@ -84,17 +92,17 @@ function captureStdout() {
 
 describe("updateAction — decision & check", () => {
   it("--check: newer → exitCode 1, no replace, announces versions", async () => {
-    const { deps, replaceCalls } = makeDeps({ tag: "v1.2.0" });
+    const { deps, replaceCalls } = makeDeps({ tag: NEWER });
     const out = captureStdout();
     const res = await updateAction({ check: true, env: {} }, deps);
     out.restore();
     expect(res.exitCode).toBe(1);
     expect(replaceCalls).toHaveLength(0);
-    expect(out.text()).toMatch(/update available.*1\.0\.0.*1\.2\.0/i);
+    expect(out.text()).toContain(`update available: ccws ${pkg.version} → ${NEWER.slice(1)}`);
   });
 
   it("--check: up-to-date → exitCode 0", async () => {
-    const { deps } = makeDeps({ tag: "v1.0.0" });
+    const { deps } = makeDeps({ tag: SAME });
     const out = captureStdout();
     const res = await updateAction({ check: true, env: {} }, deps);
     out.restore();
@@ -103,7 +111,7 @@ describe("updateAction — decision & check", () => {
   });
 
   it("up-to-date, no force → exitCode 0, no replace", async () => {
-    const { deps, replaceCalls } = makeDeps({ tag: "v1.0.0" });
+    const { deps, replaceCalls } = makeDeps({ tag: SAME });
     const res = await updateAction({ env: {} }, deps);
     expect(res.exitCode).toBe(0);
     expect(replaceCalls).toHaveLength(0);
@@ -112,7 +120,7 @@ describe("updateAction — decision & check", () => {
 
 describe("updateAction — install", () => {
   it("newer → downloads, verifies, replaces, exitCode 0", async () => {
-    const { deps, replaceCalls, bytes } = makeDeps({ tag: "v1.2.0" });
+    const { deps, replaceCalls, bytes } = makeDeps({ tag: NEWER });
     const out = captureStdout();
     const res = await updateAction({ env: {} }, deps);
     out.restore();
@@ -123,47 +131,47 @@ describe("updateAction — install", () => {
   });
 
   it("--force on same version → reinstalls", async () => {
-    const { deps, replaceCalls } = makeDeps({ tag: "v1.0.0" });
+    const { deps, replaceCalls } = makeDeps({ tag: SAME });
     const res = await updateAction({ force: true, env: {} }, deps);
     expect(res.exitCode).toBe(0);
     expect(replaceCalls).toHaveLength(1);
   });
 
   it("checksum mismatch → throws, no replace", async () => {
-    const { deps, replaceCalls } = makeDeps({ tag: "v1.2.0", checksumOverride: "0".repeat(64) });
+    const { deps, replaceCalls } = makeDeps({ tag: NEWER, checksumOverride: "0".repeat(64) });
     await expect(updateAction({ env: {} }, deps)).rejects.toThrow(/checksum mismatch|aborted/i);
     expect(replaceCalls).toHaveLength(0);
   });
 
   it("missing checksum entry → throws, no replace", async () => {
-    const { deps, replaceCalls } = makeDeps({ tag: "v1.2.0", omitChecksum: true });
+    const { deps, replaceCalls } = makeDeps({ tag: NEWER, omitChecksum: true });
     await expect(updateAction({ env: {} }, deps)).rejects.toThrow(/no checksum.*aborted/i);
     expect(replaceCalls).toHaveLength(0);
   });
 
   it("interpreter execPath → throws, no replace", async () => {
-    const { deps, replaceCalls } = makeDeps({ tag: "v1.2.0", execPath: "/usr/local/bin/bun" });
+    const { deps, replaceCalls } = makeDeps({ tag: NEWER, execPath: "/usr/local/bin/bun" });
     await expect(updateAction({ env: {} }, deps)).rejects.toThrow(/JS runtime|install.*compiled/i);
     expect(replaceCalls).toHaveLength(0);
   });
 
   it("unsupported platform → throws", async () => {
-    const { deps } = makeDeps({ tag: "v1.2.0", platform: "freebsd" });
+    const { deps } = makeDeps({ tag: NEWER, platform: "freebsd" });
     await expect(updateAction({ env: {} }, deps)).rejects.toThrow(/unsupported platform/i);
   });
 
   it("asset download failure → throws", async () => {
-    const { deps } = makeDeps({ tag: "v1.2.0", assetStatus: 404 });
+    const { deps } = makeDeps({ tag: NEWER, assetStatus: 404 });
     await expect(updateAction({ env: {} }, deps)).rejects.toThrow(/failed to download/i);
   });
 
   it("checksums download failure → throws", async () => {
-    const { deps } = makeDeps({ tag: "v1.2.0", checksumsStatus: 404 });
+    const { deps } = makeDeps({ tag: NEWER, checksumsStatus: 404 });
     await expect(updateAction({ env: {} }, deps)).rejects.toThrow(/checksums\.txt/i);
   });
 
   it("EACCES from replaceBinary → friendly sudo guidance", async () => {
-    const { deps } = makeDeps({ tag: "v1.2.0" });
+    const { deps } = makeDeps({ tag: NEWER });
     deps.replaceBinary = async () => {
       throw Object.assign(new Error("denied"), { code: "EACCES" });
     };
@@ -173,22 +181,22 @@ describe("updateAction — install", () => {
 
 describe("updateAction — repo resolution", () => {
   it("uses --repo when provided", async () => {
-    const { deps, visited } = makeDeps({ tag: "v1.0.0" });
+    const { deps, visited } = makeDeps({ tag: SAME });
     await updateAction({ repo: "fork/ccws", env: {} }, deps);
     expect(visited.some((u) => u.includes("fork/ccws/releases/latest"))).toBe(true);
   });
   it("falls back to CCWS_REPO env", async () => {
-    const { deps, visited } = makeDeps({ tag: "v1.0.0" });
+    const { deps, visited } = makeDeps({ tag: SAME });
     await updateAction({ env: { CCWS_REPO: "envr/ccws" } }, deps);
     expect(visited.some((u) => u.includes("envr/ccws/releases/latest"))).toBe(true);
   });
   it("defaults to edditz/ccws", async () => {
-    const { deps, visited } = makeDeps({ tag: "v1.0.0" });
+    const { deps, visited } = makeDeps({ tag: SAME });
     await updateAction({ env: {} }, deps);
     expect(visited.some((u) => u.includes("edditz/ccws/releases/latest"))).toBe(true);
   });
   it("--repo beats CCWS_REPO", async () => {
-    const { deps, visited } = makeDeps({ tag: "v1.0.0" });
+    const { deps, visited } = makeDeps({ tag: SAME });
     await updateAction({ repo: "cli/repo", env: { CCWS_REPO: "env/repo" } }, deps);
     expect(visited.some((u) => u.includes("cli/repo/releases/latest"))).toBe(true);
   });
@@ -196,19 +204,19 @@ describe("updateAction — repo resolution", () => {
 
 describe("updateAction — API errors", () => {
   it("403 → rate-limit message", async () => {
-    const { deps } = makeDeps({ tag: "v1.0.0", apiStatus: 403 });
+    const { deps } = makeDeps({ tag: SAME, apiStatus: 403 });
     await expect(updateAction({ env: {} }, deps)).rejects.toThrow(/rate limit/i);
   });
   it("403 without rate-limit header → access-restricted message", async () => {
-    const { deps } = makeDeps({ tag: "v1.0.0", apiStatus: 403, apiRateLimited: false });
+    const { deps } = makeDeps({ tag: SAME, apiStatus: 403, apiRateLimited: false });
     await expect(updateAction({ env: {} }, deps)).rejects.toThrow(/access restricted|403|private repo/i);
   });
   it("500 → generic fetch-failure message", async () => {
-    const { deps } = makeDeps({ tag: "v1.0.0", apiStatus: 500 });
+    const { deps } = makeDeps({ tag: SAME, apiStatus: 500 });
     await expect(updateAction({ env: {} }, deps)).rejects.toThrow(/failed to fetch latest release/i);
   });
   it("missing tag_name → throws", async () => {
-    const base = makeDeps({ tag: "v1.0.0" });
+    const base = makeDeps({ tag: SAME });
     const deps: UpdateDeps = {
       ...base.deps,
       fetch: (async () => jsonRes(200, { assets: [] })) as UpdateDeps["fetch"],

@@ -2,6 +2,7 @@
   "name": "ccws",
   "version": "1.0.0",
   "description": "Manage Claude Code workspaces",
+  "license": "MIT",
   "type": "module",
   "bin": {
     "ccws": "./src/cli.ts"

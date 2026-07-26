@@ -52,3 +52,7 @@ bun run src/cli.ts <cmd>
 bun run build          # current-platform binary
 bun run build:all      # full platform matrix
 ```
+
+## License
+
+MIT — see [LICENSE](./LICENSE). © Eddie

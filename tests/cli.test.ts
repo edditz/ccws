@@ -18,7 +18,7 @@ describe("cli", () => {
   it("builds with version and all subcommands", () => {
     const program = buildCli();
     const names = program.commands.map((c) => c.name());
-    for (const n of ["init", "add", "remove", "list", "status", "open"]) {
+    for (const n of ["init", "add", "remove", "list", "status", "open", "update"]) {
       expect(names).toContain(n);
     }
   });
@@ -30,12 +30,26 @@ describe("cli", () => {
     expect(list!.alias()).toBe("ls");
   });
 
-  it("registers a global -r/--root option on every subcommand", () => {
+  it("registers -r/--root on every workspace subcommand (update intentionally excluded)", () => {
     const program = buildCli();
-    for (const cmd of program.commands) {
-      const flags = cmd.options.map((o) => o.long);
-      expect(flags).toContain("--root");
+    for (const n of ["init", "add", "remove", "list", "status", "open"]) {
+      const cmd = program.commands.find((c) => c.name() === n);
+      expect(cmd).toBeDefined();
+      expect(cmd!.options.map((o) => o.long)).toContain("--root");
     }
+    const update = program.commands.find((c) => c.name() === "update");
+    expect(update).toBeDefined();
+    expect(update!.options.map((o) => o.long)).not.toContain("--root");
+  });
+
+  it("registers the update command with --check/--force/--repo flags", () => {
+    const program = buildCli();
+    const update = program.commands.find((c) => c.name() === "update");
+    expect(update).toBeDefined();
+    const flags = update!.options.map((o) => o.long);
+    expect(flags).toContain("--check");
+    expect(flags).toContain("--force");
+    expect(flags).toContain("--repo");
   });
 
   it("reports a version", () => {

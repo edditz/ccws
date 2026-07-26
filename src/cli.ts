@@ -6,6 +6,7 @@ import { removeAction } from "./commands/remove.js";
 import { listAction } from "./commands/list.js";
 import { statusAction } from "./commands/status.js";
 import { openAction } from "./commands/open.js";
+import { updateAction } from "./commands/update.js";
 import { error } from "./utils/log.js";
 import pkg from "../package.json" with { type: "json" };
 
@@ -96,6 +97,21 @@ export function buildCli(): Command {
     .action(async (name: string, opts) => {
       try {
         await openAction(name, opts);
+      } catch (e) {
+        fail(e);
+      }
+    });
+
+  program
+    .command("update")
+    .description("self-update the ccws binary from GitHub Releases")
+    .option("--check", "only check for a newer version; exit 1 if available")
+    .option("--force", "reinstall even if already on the latest version")
+    .option("--repo <owner/repo>", "source repo (default edditz/ccws, or CCWS_REPO)")
+    .action(async (opts) => {
+      try {
+        const { exitCode } = await updateAction(opts);
+        if (exitCode !== 0) process.exit(exitCode);
       } catch (e) {
         fail(e);
       }

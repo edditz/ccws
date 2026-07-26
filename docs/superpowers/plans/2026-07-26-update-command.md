@@ -124,7 +124,7 @@ describe("pickChecksum", () => {
     expect(pickChecksum(mkText(h), "ccws-darwin-arm64")).toBe(h.toLowerCase());
   });
   it("returns null when the asset is absent", () => {
-    expect(pickChecksum(mkText("c".repeat(64)), "ccws-linux-x64")).toBeNull();
+    expect(pickChecksum(mkText("c".repeat(64)), "ccws-windows-x64.exe")).toBeNull();
   });
 });
 
@@ -316,7 +316,7 @@ import {
 
 const jsonRes = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
-const bytesRes = (status: number, bytes: Uint8Array) => new Response(bytes, { status });
+const bytesRes = (status: number, bytes: Uint8Array) => new Response(bytes as BodyInit, { status });
 const textRes = (status: number, text: string) => new Response(text, { status });
 
 interface MakeArgs {
@@ -415,7 +415,7 @@ describe("updateAction — install", () => {
     out.restore();
     expect(res.exitCode).toBe(0);
     expect(replaceCalls).toHaveLength(1);
-    expect(replaceCalls[0].bytes).toBe(bytes);
+    expect(replaceCalls[0].bytes).toStrictEqual(bytes);
     expect(out.text()).toMatch(/updated ccws/i);
   });
 

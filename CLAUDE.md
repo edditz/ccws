@@ -53,4 +53,4 @@ CLI 子命令:`init`(含 `-i/--interactive`、`-f/--force`)、`add`、`remove`�
 
 ## 参考文档
 
-完整设计与逐任务实现计划见 `docs/superpowers/`(specs/ 为设计稿,plans/ 为 TDD 实现计划)。
+完整设计与逐任务实现计划见 `docs/superpowers/`(specs/ 为设计稿,plans/ 为 TDD 实现计划)。发布/部署流程见 `RELEASING.md`,版本历史见 `CHANGELOG.md`。

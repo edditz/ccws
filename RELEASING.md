@@ -111,3 +111,19 @@ workflow above so they shouldn't recur:
    `can-run` gate.
 4. **Double `v` (`vv1.0.0`)** → HTML added a `v` prefix on top of the tag name
    the workflow already injects; removed the HTML-side prefix.
+
+## `ccws update` (self-update)
+
+Shipped in v1.1.0. `ccws update` queries
+`https://api.github.com/repos/edditz/ccws/releases/latest`, compares the tag to
+`package.json`'s version, and on update downloads the platform asset +
+`checksums.txt`, verifies SHA-256, and atomically replaces the running binary.
+Default repo is `edditz/ccws`; `CCWS_REPO` / `--repo` overrides (for forks).
+
+**`process.execPath` under `bun build --compile`** resolves to the real binary
+on disk (e.g. `/private/tmp/ccws`), NOT the virtual `$bunfs` path that
+`process.argv[1]` / `import.meta.url` point at (see the `isMain()` comment in
+`src/cli.ts`). `update` relies on this to locate the binary to replace, and it
+was verified for v1.1.0 with a compiled probe. If a future Bun release changes
+this, the fallback is `realpathSync(process.argv[0])` in `defaultDeps()`
+(`src/commands/update.ts`).

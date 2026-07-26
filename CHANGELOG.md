@@ -4,6 +4,27 @@ All notable changes to ccws are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-07-26
+
+### Added
+- `update` command: self-update the compiled binary from GitHub Releases.
+  Checks the latest release, downloads the matching platform asset, verifies
+  SHA-256 against `checksums.txt`, and atomically replaces the running binary
+  (Unix: temp-file + `rename`; Windows: running-`.exe` rename trick).
+  - `--check`: report only; exits 1 if a newer version exists (CI/script-friendly).
+  - `--force`: reinstall even when already on the latest version.
+  - `--repo <owner/repo>` (or `CCWS_REPO`): override the source repo for forks;
+    defaults to `edditz/ccws`.
+- Pure self-update helpers in `src/core/updater.ts` (`compareVersions`,
+  `platformToAsset`, `pickChecksum`, `stripLeadingV`, `isInterpreterExecPath`).
+- Injectable I/O seams in `src/commands/update.ts` (`fetch`/`sha256`/
+  `replaceBinary`/`execPath`/`platform`/`arch`) so all network/fs behavior is
+  unit-testable with fakes (mirrors the `open` command's `runner` pattern).
+
+### Changed
+- `src/cli.ts` registers the `update` subcommand — the only subcommand without
+  `-r/--root`, since it operates on the binary rather than workspaces.
+
 ## [1.0.0] - 2026-07-26
 
 First public release.
@@ -22,4 +43,5 @@ First public release.
 - Project site at https://edditz.github.io/ccws/.
 - MIT license.
 
+[1.1.0]: https://github.com/edditz/ccws/releases/tag/v1.1.0
 [1.0.0]: https://github.com/edditz/ccws/releases/tag/v1.0.0

@@ -5,7 +5,8 @@ import { join } from "node:path";
 import { initAction } from "../../src/commands/init.js";
 import { addAction } from "../../src/commands/add.js";
 import { removeAction } from "../../src/commands/remove.js";
-import { settingsPath } from "../../src/core/config.js";
+import { claudeMdPath, settingsPath } from "../../src/core/config.js";
+import { BEGIN } from "../../src/core/claude-md.js";
 
 let root: string;
 let a: string;
@@ -70,5 +71,18 @@ describe("removeAction", () => {
   });
   it("fails when --workspace is omitted and cwd is not inside a workspace root", async () => {
     await expect(removeAction([a], { root })).rejects.toThrow(/not inside a workspace|--workspace/i);
+  });
+
+  it("syncs CLAUDE.md after remove — the removed dir disappears from the block", async () => {
+    await initAction("demo", { root });
+    await addAction([a, b], { root, workspace: "demo" });
+    const file = claudeMdPath(root, "demo");
+    expect(readFileSync(file, "utf8")).toContain(`- ${a}`);
+
+    await removeAction([a], { root, workspace: "demo" });
+
+    const after = readFileSync(file, "utf8");
+    expect(after).not.toContain(`- ${a}`);
+    expect(after).toContain(`- ${b}`);
   });
 });

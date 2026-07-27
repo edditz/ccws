@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { mkdtempSync, readFileSync, realpathSync } from "node:fs";
+import { mkdtempSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initAction } from "../../src/commands/init.js";
 import { addAction } from "../../src/commands/add.js";
-import { settingsPath } from "../../src/core/config.js";
+import { claudeMdPath, settingsPath } from "../../src/core/config.js";
 
 let root: string;
 let realDir: string;
@@ -62,5 +62,20 @@ describe("addAction", () => {
   it("fails when --workspace is omitted and cwd is not inside a workspace root", async () => {
     // process.cwd() is the repo root (outside the temp `root`), so detection yields null.
     await expect(addAction([realDir], { root })).rejects.toThrow(/not inside a workspace|--workspace/i);
+  });
+
+  it("syncs CLAUDE.md after add, preserving user content outside the block", async () => {
+    await initAction("demo", { root });
+    const file = claudeMdPath(root, "demo");
+    // 用户在区块外(HEADER 区域)加备注
+    let content = readFileSync(file, "utf8");
+    content = content.replace("# Workspace", "# Workspace\n\nMy project notes\n");
+    writeFileSync(file, content, "utf8");
+
+    await addAction([realDir], { root, workspace: "demo" });
+
+    const after = readFileSync(file, "utf8");
+    expect(after).toContain("My project notes");
+    expect(after).toContain(`- ${realDir}`);
   });
 });

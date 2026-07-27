@@ -2,6 +2,7 @@ import { resolveRoot, detectWorkspaceFromCwd, settingsPath } from "../core/confi
 import { writeAdditionalDirs } from "../core/settings.js";
 import { toAbsolute, assertAllExist } from "../core/paths.js";
 import { workspaceExists, validateWorkspaceName } from "../core/workspace.js";
+import { syncClaudeMd } from "../core/claude-md.js";
 import { success } from "../utils/log.js";
 
 export interface AddOptions {
@@ -34,5 +35,6 @@ export async function addAction(dirs: string[], opts: AddOptions): Promise<void>
   }
 
   writeAdditionalDirs(settingsPath(root, name), abs);
+  syncClaudeMd(root, name);
   success(`added ${abs.length} director${abs.length === 1 ? "y" : "ies"} to "${name}"`);
 }

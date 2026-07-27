@@ -2,6 +2,7 @@ import { resolveRoot, detectWorkspaceFromCwd, settingsPath } from "../core/confi
 import { readSettings, setAdditionalDirs } from "../core/settings.js";
 import { toAbsolute } from "../core/paths.js";
 import { workspaceExists, validateWorkspaceName } from "../core/workspace.js";
+import { syncClaudeMd } from "../core/claude-md.js";
 import { success } from "../utils/log.js";
 
 export interface RemoveOptions {
@@ -35,5 +36,6 @@ export async function removeAction(dirs: string[], opts: RemoveOptions): Promise
   }
   const next = current.filter((d) => !toRemove.has(d));
   setAdditionalDirs(settingsPath(root, name), next);
+  syncClaudeMd(root, name);
   success(`removed ${toRemove.size} director${toRemove.size === 1 ? "y" : "ies"} from "${name}"`);
 }

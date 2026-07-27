@@ -20,7 +20,7 @@ bun run build                            # 当前平台单文件 binary → dist
 bun run build:all                        # 全平台矩阵(darwin/linux/windows)
 ```
 
-CLI 子命令:`init`(含 `-i/--interactive`、`-f/--force`)、`add`、`remove`、`list`(别名 `ls`)、`status`、`open`、`update`(自更新二进制,带 `--check`/`--force`/`--repo`)。全局 `-r/--root <path>` 覆盖 `$ROOT`(优先级 `--root` > `CCWS_ROOT` 环境变量 > `~/.ccws/`)。
+CLI 子命令:`init`(含 `-i/--interactive`、`-f/--force`)、`add`、`remove`、`list`(别名 `ls`)、`status`、`open`、`update`(自更新二进制,带 `--check`/`--force`/`--repo`)、`regen`(重建工作区 CLAUDE.md,带 `--force`)。全局 `-r/--root <path>` 覆盖 `$ROOT`(优先级 `--root` > `CCWS_ROOT` 环境变量 > `~/.ccws/`)。
 
 ## 架构
 
@@ -43,6 +43,7 @@ CLI 子命令:`init`(含 `-i/--interactive`、`-f/--force`)、`add`、`remove`�
 - **输出纪律**:源码除 `utils/log.ts` 外**禁用 `console.log`**;命令失败只 `throw`(由 cli.ts 的 `fail` 统一打印,不要在 action 里再调 `error()` 否则双重日志)。
 - **不可变**:不修改入参,构造新对象。
 - **版本号单一来源**:`package.json` 的 `version` 是唯一真值;`src/cli.ts` 与测试通过 import attributes(`import pkg from "../package.json" with { type: "json" }`)读取,禁止硬编码版本字符串。改版本只动 `package.json` 一处。
+- **CLAUDE.md 自动维护**:每个工作区的 `CLAUDE.md` 由 `syncClaudeMd`(`src/core/claude-md.ts`)在 `init`/`add`/`remove`/`regen` 时自动维护;`BEGIN`/`END` 标记(`<!-- ccws:additional-directories:begin -->` / `...:end -->`)圈住自动同步的目录列表区块,**只重写区块内,区块外保留**。标记文本是**发布契约**——老工作区的 CLAUDE.md 里已有,新版 ccws 必须识别原文本,不得修改;若必须迁移,需同时识别新旧标记。标记异常(孤立/多对/顺序颠倒)时 `writeClaudeMd` 抛错、不写文件,由 `regen --force` 全量重写兜底。core 层(`claude-md.ts`)不依赖 `utils/log`,日志由 command 层按 `WriteOutcome` 打印。
 
 ## 测试惯例
 

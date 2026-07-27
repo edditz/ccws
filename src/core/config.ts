@@ -19,6 +19,10 @@ export function settingsPath(root: string, name: string): string {
   return join(workspacePath(root, name), ".claude", "settings.json");
 }
 
+export function claudeMdPath(root: string, name: string): string {
+  return join(workspacePath(root, name), "CLAUDE.md");
+}
+
 export function detectWorkspaceFromCwd(root: string, cwd: string = process.cwd()): string | null {
   const rel = relative(root, cwd);
   if (rel.startsWith("..") || rel === "") return null;

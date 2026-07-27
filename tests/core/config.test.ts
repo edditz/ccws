@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, mkdir } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  resolveRoot, workspacePath, settingsPath,
+  resolveRoot, workspacePath, settingsPath, claudeMdPath,
   detectWorkspaceFromCwd, discoverWorkspaces,
 } from "../../src/core/config.js";
 
@@ -32,6 +32,9 @@ describe("paths", () => {
   it("workspacePath and settingsPath", () => {
     expect(workspacePath(root, "demo")).toBe(join(root, "demo"));
     expect(settingsPath(root, "demo")).toBe(join(root, "demo", ".claude", "settings.json"));
+  });
+  it("claudeMdPath", () => {
+    expect(claudeMdPath(root, "demo")).toBe(join(root, "demo", "CLAUDE.md"));
   });
 });
 

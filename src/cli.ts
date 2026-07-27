@@ -7,6 +7,7 @@ import { listAction } from "./commands/list.js";
 import { statusAction } from "./commands/status.js";
 import { openAction } from "./commands/open.js";
 import { updateAction } from "./commands/update.js";
+import { regenAction } from "./commands/regen.js";
 import { error } from "./utils/log.js";
 import pkg from "../package.json" with { type: "json" };
 
@@ -112,6 +113,19 @@ export function buildCli(): Command {
       try {
         const { exitCode } = await updateAction(opts);
         if (exitCode !== 0) process.exit(exitCode);
+      } catch (e) {
+        fail(e);
+      }
+    });
+
+  program
+    .command("regen [name]")
+    .description("regenerate the workspace's CLAUDE.md from its associated directories")
+    .addOption(rootOption())
+    .option("-f, --force", "overwrite the entire CLAUDE.md (discards content outside the markers)")
+    .action(async (name: string | undefined, opts) => {
+      try {
+        await regenAction(name, opts);
       } catch (e) {
         fail(e);
       }

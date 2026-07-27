@@ -18,7 +18,7 @@ describe("cli", () => {
   it("builds with version and all subcommands", () => {
     const program = buildCli();
     const names = program.commands.map((c) => c.name());
-    for (const n of ["init", "add", "remove", "list", "status", "open", "update"]) {
+    for (const n of ["init", "add", "remove", "list", "status", "open", "update", "regen"]) {
       expect(names).toContain(n);
     }
   });
@@ -32,7 +32,7 @@ describe("cli", () => {
 
   it("registers -r/--root on every workspace subcommand (update intentionally excluded)", () => {
     const program = buildCli();
-    for (const n of ["init", "add", "remove", "list", "status", "open"]) {
+    for (const n of ["init", "add", "remove", "list", "status", "open", "regen"]) {
       const cmd = program.commands.find((c) => c.name() === n);
       expect(cmd).toBeDefined();
       expect(cmd!.options.map((o) => o.long)).toContain("--root");
@@ -50,6 +50,15 @@ describe("cli", () => {
     expect(flags).toContain("--check");
     expect(flags).toContain("--force");
     expect(flags).toContain("--repo");
+  });
+
+  it("registers the regen command with --root and --force flags", () => {
+    const program = buildCli();
+    const regen = program.commands.find((c) => c.name() === "regen");
+    expect(regen).toBeDefined();
+    const flags = regen!.options.map((o) => o.long);
+    expect(flags).toContain("--root");
+    expect(flags).toContain("--force");
   });
 
   it("reports a version", () => {

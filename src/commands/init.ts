@@ -3,6 +3,7 @@ import { resolveRoot, settingsPath, workspacePath } from "../core/config.js";
 import { createWorkspace, workspaceExists, validateWorkspaceName } from "../core/workspace.js";
 import { assertAllExist, toAbsolute } from "../core/paths.js";
 import { writeAdditionalDirs } from "../core/settings.js";
+import { syncClaudeMd } from "../core/claude-md.js";
 import { success } from "../utils/log.js";
 
 export interface InitOptions {
@@ -76,6 +77,8 @@ export async function initAction(name: string, opts: InitOptions): Promise<void>
       throw new Error((err as Error).message);
     }
   }
+
+  syncClaudeMd(root, name);
 
   success(`created workspace "${name}" at ${workspacePath(root, name)}`);
 }

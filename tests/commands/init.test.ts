@@ -5,6 +5,8 @@ import { join, resolve } from "node:path";
 import { initAction } from "../../src/commands/init.js";
 import { workspaceExists } from "../../src/core/workspace.js";
 import { settingsPath } from "../../src/core/config.js";
+import { claudeMdPath } from "../../src/core/config.js";
+import { BEGIN } from "../../src/core/claude-md.js";
 
 let root: string;
 beforeEach(() => { root = mkdtempSync(join(tmpdir(), "ccws-root-")); });
@@ -100,5 +102,23 @@ describe("initAction", () => {
     const written = JSON.parse(readFileSync(settingsPath(root, "demo"), "utf8"))
       .permissions.additionalDirectories as string[];
     expect(written).toEqual([]);
+  });
+
+  it("generates a CLAUDE.md with an empty dirs block on init", async () => {
+    await initAction("demo", { root });
+    const content = readFileSync(claudeMdPath(root, "demo"), "utf8");
+    expect(content).toContain("# Workspace");
+    expect(content).toContain(BEGIN);
+    expect(content).toContain("none yet");
+  });
+
+  it("--interactive reflects collected dirs in CLAUDE.md", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "real-"));
+    const answers = [dir, ""];
+    let i = 0;
+    const promptText = async () => answers[i++] ?? "";
+    await initAction("demo", { root, interactive: true, promptText });
+    const content = readFileSync(claudeMdPath(root, "demo"), "utf8");
+    expect(content).toContain(`- ${resolve(dir)}`);
   });
 });

@@ -1,10 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   BEGIN,
   END,
   renderDirsBlock,
   renderFull,
   countOccurrences,
+  writeClaudeMd,
 } from "../../src/core/claude-md.js";
 
 describe("renderDirsBlock", () => {
@@ -70,5 +74,85 @@ describe("countOccurrences", () => {
   });
   it("returns 0 for an empty needle", () => {
     expect(countOccurrences("aaa", "")).toBe(0);
+  });
+});
+
+describe("writeClaudeMd", () => {
+  let dir: string;
+  let file: string;
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "ccws-md-"));
+    file = join(dir, "CLAUDE.md");
+  });
+
+  it("creates the file with full content when absent, returns 'created'", () => {
+    const out = writeClaudeMd(file, [{ path: "/a", missing: false }]);
+    expect(out).toBe("created");
+    const content = readFileSync(file, "utf8");
+    expect(content).toContain("# Workspace");
+    expect(content).toContain("- /a");
+  });
+
+  it("rewrites only the block on a single complete pair, preserving outside content", () => {
+    const initial =
+      "# My custom notes\n\nimportant line\n\n" +
+      `${BEGIN}\n- /old\n${END}\n\nfooter notes\n`;
+    writeFileSync(file, initial, "utf8");
+    const out = writeClaudeMd(file, [{ path: "/new", missing: false }]);
+    expect(out).toBe("rewrote-block");
+    const content = readFileSync(file, "utf8");
+    expect(content).toContain("important line");
+    expect(content).toContain("footer notes");
+    expect(content).toContain("- /new");
+    expect(content).not.toContain("- /old");
+  });
+
+  it("appends a block when no markers exist, returns 'appended'", () => {
+    writeFileSync(file, "# Just my notes\n", "utf8");
+    const out = writeClaudeMd(file, [{ path: "/a", missing: false }]);
+    expect(out).toBe("appended");
+    const content = readFileSync(file, "utf8");
+    expect(content).toContain("# Just my notes");
+    expect(content).toContain("- /a");
+    expect(content).toContain(BEGIN);
+    expect(content).toContain(END);
+  });
+
+  it("is idempotent: append then sync again rewrites the block, no second block", () => {
+    writeFileSync(file, "# Notes\n", "utf8");
+    writeClaudeMd(file, [{ path: "/a", missing: false }]);
+    const out2 = writeClaudeMd(file, [
+      { path: "/a", missing: false },
+      { path: "/b", missing: false },
+    ]);
+    expect(out2).toBe("rewrote-block");
+    const content = readFileSync(file, "utf8");
+    expect(countOccurrences(content, BEGIN)).toBe(1);
+    expect(countOccurrences(content, END)).toBe(1);
+    expect(content).toContain("- /b");
+  });
+
+  it("throws and leaves the file unchanged on an orphan BEGIN", () => {
+    writeFileSync(file, `# Notes\n${BEGIN}\n- /old\n`, "utf8");
+    const before = readFileSync(file, "utf8");
+    expect(() => writeClaudeMd(file, [{ path: "/a", missing: false }])).toThrow(
+      /incomplete|malformed/i,
+    );
+    expect(readFileSync(file, "utf8")).toBe(before);
+  });
+
+  it("throws on an orphan END", () => {
+    writeFileSync(file, `# Notes\n${END}\n`, "utf8");
+    expect(() => writeClaudeMd(file, [])).toThrow(/incomplete|malformed/i);
+  });
+
+  it("throws on multiple BEGIN markers (with a matching END)", () => {
+    writeFileSync(file, `${BEGIN}\n${BEGIN}\n${END}\n`, "utf8");
+    expect(() => writeClaudeMd(file, [])).toThrow(/incomplete|malformed/i);
+  });
+
+  it("throws when END appears before BEGIN", () => {
+    writeFileSync(file, `${END}\n${BEGIN}\n`, "utf8");
+    expect(() => writeClaudeMd(file, [])).toThrow(/incomplete|malformed/i);
   });
 });

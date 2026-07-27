@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync, existsSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createWorkspace } from "../../src/core/workspace.js";
+import { writeAdditionalDirs } from "../../src/core/settings.js";
+import { claudeMdPath, settingsPath } from "../../src/core/config.js";
 import {
   BEGIN,
   END,
@@ -9,6 +12,9 @@ import {
   renderFull,
   countOccurrences,
   writeClaudeMd,
+  syncClaudeMd,
+  readDirEntries,
+  forceRewriteClaudeMd,
 } from "../../src/core/claude-md.js";
 
 describe("renderDirsBlock", () => {
@@ -154,5 +160,69 @@ describe("writeClaudeMd", () => {
   it("throws when END appears before BEGIN", () => {
     writeFileSync(file, `${END}\n${BEGIN}\n`, "utf8");
     expect(() => writeClaudeMd(file, [])).toThrow(/incomplete|malformed/i);
+  });
+});
+
+describe("readDirEntries / syncClaudeMd / forceRewriteClaudeMd", () => {
+  let root: string;
+  let realDir: string;
+  beforeEach(() => {
+    root = realpathSync(mkdtempSync(join(tmpdir(), "ccws-root-")));
+    realDir = realpathSync(mkdtempSync(join(tmpdir(), "real-")));
+  });
+
+  it("readDirEntries maps settings dirs to entries with the missing flag", () => {
+    createWorkspace(root, "demo");
+    writeAdditionalDirs(settingsPath(root, "demo"), [realDir, "/does/not/exist"]);
+    expect(readDirEntries(root, "demo")).toEqual([
+      { path: realDir, missing: false },
+      { path: "/does/not/exist", missing: true },
+    ]);
+  });
+
+  it("readDirEntries returns [] when additionalDirectories is absent", () => {
+    createWorkspace(root, "demo");
+    expect(readDirEntries(root, "demo")).toEqual([]);
+  });
+
+  it("syncClaudeMd creates CLAUDE.md when absent, with the empty hint", () => {
+    createWorkspace(root, "demo");
+    const out = syncClaudeMd(root, "demo");
+    expect(out).toBe("created");
+    const content = readFileSync(claudeMdPath(root, "demo"), "utf8");
+    expect(content).toContain("none yet");
+  });
+
+  it("syncClaudeMd reflects current dirs and marks missing ones", () => {
+    createWorkspace(root, "demo");
+    writeAdditionalDirs(settingsPath(root, "demo"), [realDir, "/gone"]);
+    syncClaudeMd(root, "demo");
+    const content = readFileSync(claudeMdPath(root, "demo"), "utf8");
+    expect(content).toContain(`- ${realDir}`);
+    expect(content).toContain("- /gone  ⚠️ missing");
+  });
+
+  it("syncClaudeMd is idempotent (second call returns 'rewrote-block')", () => {
+    createWorkspace(root, "demo");
+    writeAdditionalDirs(settingsPath(root, "demo"), [realDir]);
+    syncClaudeMd(root, "demo");
+    expect(syncClaudeMd(root, "demo")).toBe("rewrote-block");
+  });
+
+  it("syncClaudeMd routes corrupt settings through readSettings (throws, no write)", () => {
+    createWorkspace(root, "demo");
+    writeFileSync(settingsPath(root, "demo"), "{ not json", "utf8");
+    expect(() => syncClaudeMd(root, "demo")).toThrow(/corrupt/i);
+  });
+
+  it("forceRewriteClaudeMd overwrites the whole file, discarding outside content", () => {
+    createWorkspace(root, "demo");
+    const file = claudeMdPath(root, "demo");
+    writeFileSync(file, "# precious custom content\n", "utf8");
+    forceRewriteClaudeMd(file, [{ path: realDir, missing: false }]);
+    const content = readFileSync(file, "utf8");
+    expect(content).not.toContain("precious custom content");
+    expect(content).toContain("# Workspace");
+    expect(content).toContain(`- ${realDir}`);
   });
 });

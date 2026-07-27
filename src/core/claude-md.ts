@@ -1,4 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { claudeMdPath, settingsPath } from "./config.js";
+import { readSettings } from "./settings.js";
 
 /**
  * Maintenance markers wrapping the auto-managed directory list. These are a
@@ -111,4 +113,21 @@ export function writeClaudeMd(path: string, entries: DirEntry[]): WriteOutcome {
   throw new Error(
     `ccws maintenance markers in ${path} are incomplete/malformed — sync skipped to avoid damage. Fix the markers (ensure exactly one begin…end pair) or run \`ccws regen --force\` to rewrite the whole file.`,
   );
+}
+
+/** Read additionalDirectories from settings and tag each with missing flag. */
+export function readDirEntries(root: string, name: string): DirEntry[] {
+  const settings = readSettings(settingsPath(root, name));
+  const dirs: string[] = settings.permissions?.additionalDirectories ?? [];
+  return dirs.map((p) => ({ path: p, missing: !existsSync(p) }));
+}
+
+/** Read settings → write CLAUDE.md. Transparently returns writeClaudeMd's outcome / throws. */
+export function syncClaudeMd(root: string, name: string): WriteOutcome {
+  return writeClaudeMd(claudeMdPath(root, name), readDirEntries(root, name));
+}
+
+/** Unconditionally overwrite the whole file with renderFull (the --force path). */
+export function forceRewriteClaudeMd(path: string, entries: DirEntry[]): void {
+  writeFileSync(path, renderFull(entries), "utf8");
 }

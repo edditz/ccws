@@ -76,6 +76,25 @@ describe("regenAction", () => {
     expect(after).toContain(`- ${realDir}`);
   });
 
+  it("appends the block when CLAUDE.md has no markers, preserving existing content", async () => {
+    await initAction("demo", { root });
+    await addAction([realDir], { root, workspace: "demo" });
+    const file = claudeMdPath(root, "demo");
+    // Overwrite the generated CLAUDE.md with a marker-less user file, so
+    // syncClaudeMd takes the "appended" path (no BEGIN..END pair present).
+    writeFileSync(file, "# Just my notes\n", "utf8");
+
+    await regenAction("demo", { root });
+
+    const after = readFileSync(file, "utf8");
+    expect(after).toContain("# Just my notes");
+    expect(after).toContain(BEGIN);
+    expect(after).toContain(END);
+    expect(after).toContain(`- ${realDir}`);
+    // The appended block must come AFTER the preserved user content.
+    expect(after.indexOf("# Just my notes")).toBeLessThan(after.indexOf(BEGIN));
+  });
+
   it("fails fast when the workspace does not exist", async () => {
     await expect(regenAction("missing", { root })).rejects.toThrow(
       /workspace.*not.*exist|init/i,

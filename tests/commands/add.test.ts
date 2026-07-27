@@ -68,9 +68,9 @@ describe("addAction", () => {
     await initAction("demo", { root });
     const file = claudeMdPath(root, "demo");
     // 用户在区块外(HEADER 区域)加备注
-    let content = readFileSync(file, "utf8");
-    content = content.replace("# Workspace", "# Workspace\n\nMy project notes\n");
-    writeFileSync(file, content, "utf8");
+    const content = readFileSync(file, "utf8");
+    const modified = content.replace("# Workspace", "# Workspace\n\nMy project notes\n");
+    writeFileSync(file, modified, "utf8");
 
     await addAction([realDir], { root, workspace: "demo" });
 

@@ -6,7 +6,6 @@ import { initAction } from "../../src/commands/init.js";
 import { addAction } from "../../src/commands/add.js";
 import { removeAction } from "../../src/commands/remove.js";
 import { claudeMdPath, settingsPath } from "../../src/core/config.js";
-import { BEGIN } from "../../src/core/claude-md.js";
 
 let root: string;
 let a: string;

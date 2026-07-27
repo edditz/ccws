@@ -4,8 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { initAction } from "../../src/commands/init.js";
 import { workspaceExists } from "../../src/core/workspace.js";
-import { settingsPath } from "../../src/core/config.js";
-import { claudeMdPath } from "../../src/core/config.js";
+import { settingsPath, claudeMdPath } from "../../src/core/config.js";
 import { BEGIN } from "../../src/core/claude-md.js";
 
 let root: string;

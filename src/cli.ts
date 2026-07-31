@@ -8,11 +8,15 @@ import { statusAction } from "./commands/status.js";
 import { openAction } from "./commands/open.js";
 import { updateAction } from "./commands/update.js";
 import { regenAction } from "./commands/regen.js";
+import { bypassAction } from "./commands/bypass.js";
 import { error } from "./utils/log.js";
 import pkg from "../package.json" with { type: "json" };
 
 const rootOption = (): Option =>
   new Option("-r, --root <path>", "override convention root $ROOT");
+
+const isBypassState = (s: string | undefined): s is "on" | "off" | undefined =>
+  s === undefined || s === "on" || s === "off";
 
 function fail(e: unknown): never {
   error(e instanceof Error ? e.message : String(e));
@@ -126,6 +130,22 @@ export function buildCli(): Command {
     .action(async (name: string | undefined, opts) => {
       try {
         await regenAction(name, opts);
+      } catch (e) {
+        fail(e);
+      }
+    });
+
+  program
+    .command("bypass [state]")
+    .description("enable or disable the bypassPermissions mode for a workspace")
+    .addOption(rootOption())
+    .option("-w, --workspace <name>", "target workspace")
+    .action(async (state: string | undefined, opts) => {
+      try {
+        if (!isBypassState(state)) {
+          throw new Error(`invalid state "${state}" — expected "on" or "off"`);
+        }
+        await bypassAction(state, opts);
       } catch (e) {
         fail(e);
       }

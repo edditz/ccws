@@ -20,7 +20,7 @@ bun run build                            # 当前平台单文件 binary → dist
 bun run build:all                        # 全平台矩阵(darwin/linux/windows)
 ```
 
-CLI 子命令:`init`(含 `-i/--interactive`、`-f/--force`)、`add`、`remove`、`list`(别名 `ls`)、`status`、`open`、`update`(自更新二进制,带 `--check`/`--force`/`--repo`)、`regen`(重建工作区 CLAUDE.md,带 `--force`)。全局 `-r/--root <path>` 覆盖 `$ROOT`(优先级 `--root` > `CCWS_ROOT` 环境变量 > `~/.ccws/`)。
+CLI 子命令:`init`(含 `-i/--interactive`、`-f/--force`)、`add`、`remove`、`list`(别名 `ls`)、`status`、`open`、`update`(自更新二进制,带 `--check`/`--force`/`--repo`)、`regen`(重建工作区 CLAUDE.md,带 `--force`)、`bypass`(开关工作区 `permissions.defaultMode: "bypassPermissions"`,`on`/`off`/无参 getter)。全局 `-r/--root <path>` 覆盖 `$ROOT`(优先级 `--root` > `CCWS_ROOT` 环境变量 > `~/.ccws/`)。
 
 ## 架构
 

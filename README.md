@@ -38,10 +38,18 @@ ccws list my-work                      # show my-work's directories
 ccws status                            # current workspace + validity
 ccws open my-work                      # launch claude in my-work
 ccws remove ~/projects/web -w my-work
+ccws bypass on -w my-work              # defaultMode: "bypassPermissions" (skip permission prompts)
+ccws bypass off -w my-work             # remove defaultMode, back to default mode
+ccws bypass                            # show the current mode (from inside the workspace)
 ```
 
 Convention root `$ROOT` defaults to `~/.ccws/`; override with `--root <path>`
 or `CCWS_ROOT` env var.
+
+> **Security note**: `bypassPermissions` skips Claude Code's permission
+> confirmation prompts — only enable it for workspaces you fully trust. As a
+> safety guard, Claude Code still asks for confirmation when entering bypass
+> mode from a project-level `settings.json`.
 
 ## Development
 

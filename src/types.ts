@@ -1,6 +1,7 @@
 export interface SettingsJson {
   permissions?: {
     additionalDirectories?: string[];
+    defaultMode?: string;
     [key: string]: unknown;
   };
   [key: string]: unknown;

@@ -41,6 +41,8 @@ ccws remove ~/projects/web -w my-work
 ccws bypass on -w my-work              # defaultMode: "bypassPermissions" (skip permission prompts)
 ccws bypass off -w my-work             # remove defaultMode, back to default mode
 ccws bypass                            # show the current mode (from inside the workspace)
+ccws delete my-work                    # delete the workspace (asks for confirmation)
+ccws delete my-work --force            # delete without confirmation
 ```
 
 Convention root `$ROOT` defaults to `~/.ccws/`; override with `--root <path>`

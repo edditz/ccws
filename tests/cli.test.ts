@@ -18,7 +18,7 @@ describe("cli", () => {
   it("builds with version and all subcommands", () => {
     const program = buildCli();
     const names = program.commands.map((c) => c.name());
-    for (const n of ["init", "add", "remove", "list", "status", "open", "update", "regen", "bypass"]) {
+    for (const n of ["init", "add", "remove", "list", "status", "open", "update", "regen", "bypass", "delete"]) {
       expect(names).toContain(n);
     }
   });
@@ -32,7 +32,7 @@ describe("cli", () => {
 
   it("registers -r/--root on every workspace subcommand (update intentionally excluded)", () => {
     const program = buildCli();
-    for (const n of ["init", "add", "remove", "list", "status", "open", "regen", "bypass"]) {
+    for (const n of ["init", "add", "remove", "list", "status", "open", "regen", "bypass", "delete"]) {
       const cmd = program.commands.find((c) => c.name() === n);
       expect(cmd).toBeDefined();
       expect(cmd!.options.map((o) => o.long)).toContain("--root");
@@ -85,6 +85,13 @@ describe("cli", () => {
     await program.parseAsync(["node", "ccws", "init", "demo", "-r", root]);
     // Should not throw; ls alias resolves to the list command.
     await program.parseAsync(["node", "ccws", "ls", "-r", root]);
+  });
+
+  it("wires `delete` and its `rm` alias, honoring --force", async () => {
+    const program = buildCli();
+    await program.parseAsync(["node", "ccws", "init", "demo", "-r", root]);
+    await program.parseAsync(["node", "ccws", "rm", "demo", "-r", root, "-f"]);
+    expect(existsSync(settingsPath(root, "demo"))).toBe(false);
   });
 
   it("wraps action failures: prints a SINGLE error line to stderr and exits non-zero", async () => {

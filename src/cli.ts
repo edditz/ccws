@@ -9,6 +9,7 @@ import { openAction } from "./commands/open.js";
 import { updateAction } from "./commands/update.js";
 import { regenAction } from "./commands/regen.js";
 import { bypassAction } from "./commands/bypass.js";
+import { deleteAction } from "./commands/delete.js";
 import { error } from "./utils/log.js";
 import pkg from "../package.json" with { type: "json" };
 
@@ -146,6 +147,20 @@ export function buildCli(): Command {
           throw new Error(`invalid state "${state}" — expected "on" or "off"`);
         }
         await bypassAction(state, opts);
+      } catch (e) {
+        fail(e);
+      }
+    });
+
+  program
+    .command("delete <name>")
+    .alias("rm")
+    .description("delete a workspace directory recursively")
+    .addOption(rootOption())
+    .option("-f, --force", "delete without confirmation")
+    .action(async (name: string, opts) => {
+      try {
+        await deleteAction(name, opts);
       } catch (e) {
         fail(e);
       }

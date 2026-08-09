@@ -33,8 +33,10 @@ bun run build:all      # all 5 targets → dist/
 ```bash
 ccws init my-work                      # create workspace under ~/.ccws/
 ccws add ~/projects/web ~/projects/api -w my-work
-ccws list                              # list all workspaces
+ccws list                              # list all workspaces (concise)
+ccws list -l                           # also show each workspace's path + bypass status
 ccws list my-work                      # show my-work's directories
+ccws list my-work -l                   # also show my-work's bypass status
 ccws status                            # current workspace + validity
 ccws open my-work                      # launch claude in my-work
 ccws remove ~/projects/web -w my-work

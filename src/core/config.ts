@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { readdirSync, statSync, existsSync } from "node:fs";
-import { readSettings } from "./settings.js";
+import { readSettings, BYPASS_MODE } from "./settings.js";
 import { assertAllExist } from "./paths.js";
 import type { Workspace } from "../types.js";
 
@@ -38,11 +38,13 @@ export function discoverWorkspaces(root: string): Workspace[] {
   });
   return names.map((name) => {
     let dirs: string[] = [];
+    let bypass = false;
     try {
       const s = readSettings(settingsPath(root, name));
       dirs = s.permissions?.additionalDirectories ?? [];
+      bypass = s.permissions?.defaultMode === BYPASS_MODE;
     } catch { dirs = []; }
     const missing = assertAllExist(dirs).length;
-    return { name, path: workspacePath(root, name), dirs, missing };
+    return { name, path: workspacePath(root, name), dirs, missing, bypass };
   }).sort((a, b) => a.name.localeCompare(b.name));
 }

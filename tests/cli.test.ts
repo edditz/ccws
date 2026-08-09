@@ -61,6 +61,15 @@ describe("cli", () => {
     expect(flags).toContain("--force");
   });
 
+  it("registers the list command with -l/--long flag", () => {
+    const program = buildCli();
+    const list = program.commands.find((c) => c.name() === "list");
+    expect(list).toBeDefined();
+    const flags = list!.options.map((o) => o.long);
+    expect(flags).toContain("--long");
+    expect(list!.options.map((o) => o.short)).toContain("-l");
+  });
+
   it("reports a version", () => {
     const program = buildCli();
     expect(program.version()).toBe(pkg.version);

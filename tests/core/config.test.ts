@@ -63,5 +63,19 @@ describe("discoverWorkspaces", () => {
     expect(ws.map((w) => w.name)).toEqual(["demo"]);
     expect(ws[0].dirs).toEqual([real, "/nope"]);
     expect(ws[0].missing).toBe(1);
+    expect(ws[0].bypass).toBe(false);
+    expect(ws[0].path).toBe(workspacePath(root, "demo"));
+  });
+  it("reports bypass status from permissions.defaultMode", () => {
+    mkdirSync(join(root, "open", ".claude"), { recursive: true });
+    writeFileSync(join(root, "open", ".claude", "settings.json"),
+      JSON.stringify({ permissions: { additionalDirectories: [], defaultMode: "bypassPermissions" } }));
+    mkdirSync(join(root, "locked", ".claude"), { recursive: true });
+    writeFileSync(join(root, "locked", ".claude", "settings.json"),
+      JSON.stringify({ permissions: { additionalDirectories: [] } }));
+
+    const ws = discoverWorkspaces(root);
+    const byName = Object.fromEntries(ws.map((w) => [w.name, w.bypass]));
+    expect(byName).toEqual({ open: true, locked: false });
   });
 });

@@ -76,6 +76,7 @@ export function buildCli(): Command {
     .alias("ls")
     .description("list workspaces or show one workspace's directories")
     .addOption(rootOption())
+    .option("-l, --long", "show each workspace's path and bypass status")
     .action(async (name: string | undefined, opts) => {
       try {
         await listAction(name ? [name] : [], opts);

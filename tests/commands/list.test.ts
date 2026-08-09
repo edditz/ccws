@@ -18,14 +18,28 @@ const capture = () => {
 };
 
 describe("listAction", () => {
-  it("lists all workspaces with dir counts", async () => {
+  it("lists all workspaces with dir counts (concise by default)", async () => {
     await initAction("demo", { root });
     await addAction([real], { root, workspace: "demo" });
     await initAction("empty", { root });
     const out = capture();
     await listAction([], { root });
-    expect(out()).toContain("demo");
-    expect(out()).toContain("empty");
+    const text = out();
+    expect(text).toContain("demo");
+    expect(text).toContain("empty");
+    expect(text).not.toContain("bypass:");
+    expect(text).not.toContain(join(root, "demo"));
+  });
+  it("shows path and bypass status in long mode", async () => {
+    await initAction("demo", { root });
+    await addAction([real], { root, workspace: "demo" });
+    await initAction("empty", { root });
+    const out = capture();
+    await listAction([], { root, long: true });
+    const text = out();
+    expect(text).toContain(join(root, "demo"));
+    expect(text).toContain(join(root, "empty"));
+    expect(text).toContain("bypass: off");
   });
   it("shows single workspace detail with existence markers", async () => {
     await initAction("demo", { root });
@@ -37,5 +51,17 @@ describe("listAction", () => {
     const text = out();
     expect(text).toContain(real);
     expect(text).toContain("/missing");
+    expect(text).not.toContain("bypass:");
+  });
+  it("marks bypass on in long mode for both views", async () => {
+    await initAction("demo", { root });
+    writeFileSync(settingsPath(root, "demo"),
+      JSON.stringify({ permissions: { additionalDirectories: [], defaultMode: "bypassPermissions" } }));
+    const out = capture();
+    await listAction([], { root, long: true });
+    expect(out()).toContain("bypass: ON");
+    const out2 = capture();
+    await listAction(["demo"], { root, long: true });
+    expect(out2()).toContain(`bypass: ON`);
   });
 });

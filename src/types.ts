@@ -12,4 +12,5 @@ export interface Workspace {
   path: string;
   dirs: string[];
   missing: number;
+  bypass: boolean;
 }

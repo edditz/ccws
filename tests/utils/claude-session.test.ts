@@ -264,6 +264,47 @@ describe("runClaudeSession", () => {
     expect(process.listenerCount("SIGINT")).toBe(baseline);
   });
 
+  it("forwards SIGHUP/SIGTERM to the child when opted in, and detaches afterwards", async () => {
+    const before = { hup: process.listenerCount("SIGHUP"), term: process.listenerCount("SIGTERM") };
+    const killed: string[] = [];
+    const c = new EventEmitter() as unknown as ChildProcess;
+    c.kill = ((signal: string) => {
+      killed.push(signal);
+      return true;
+    }) as ChildProcess["kill"];
+    const p = runClaudeSession({ cwd: "/x", runner: () => c, forwardSignals: true });
+    expect(process.listenerCount("SIGHUP")).toBe(before.hup + 1);
+    expect(process.listenerCount("SIGTERM")).toBe(before.term + 1);
+    process.emit("SIGHUP", "SIGHUP"); // terminal closed
+    process.emit("SIGTERM", "SIGTERM"); // direct `kill <pid>`
+    expect(killed).toEqual(["SIGHUP", "SIGTERM"]);
+    c.emit("exit", null, "SIGHUP"); // the forwarded signal kills claude
+    await p;
+    expect(process.listenerCount("SIGHUP")).toBe(before.hup);
+    expect(process.listenerCount("SIGTERM")).toBe(before.term);
+    process.emit("SIGHUP", "SIGHUP"); // detached: no further forwarding
+    expect(killed).toEqual(["SIGHUP", "SIGTERM"]);
+    expect(process.exitCode).toBe(1);
+  });
+
+  it("keeps SIGHUP/SIGTERM at their default disposition without forwardSignals", async () => {
+    const before = { hup: process.listenerCount("SIGHUP"), term: process.listenerCount("SIGTERM") };
+    const killed: string[] = [];
+    const c = new EventEmitter() as unknown as ChildProcess;
+    c.kill = ((signal: string) => {
+      killed.push(signal);
+      return true;
+    }) as ChildProcess["kill"];
+    const p = runClaudeSession({ cwd: "/x", runner: () => c });
+    expect(process.listenerCount("SIGHUP")).toBe(before.hup);
+    expect(process.listenerCount("SIGTERM")).toBe(before.term);
+    process.emit("SIGHUP", "SIGHUP");
+    process.emit("SIGTERM", "SIGTERM");
+    c.emit("exit", 0, null);
+    await p;
+    expect(killed).toEqual([]);
+  });
+
   it("converts a synchronous spawn failure into a friendly error", async () => {
     const runner: Runner = () => {
       throw new Error("spawn ENOENT");

@@ -45,6 +45,11 @@ export async function scratchAction(opts: ScratchOptions): Promise<void> {
       // once the workspace is gone) with the discard notice.
       exitHint: () => `scratch session ended — workspace "${name}" discarded`,
       sessionsRoot: opts.sessionsRoot,
+      // A closed terminal (SIGHUP) or `kill <pid>` (SIGTERM) must not kill ccws
+      // outright — the finally below is the only thing that discards the
+      // workspace, and a signal-killed process never runs it. Forward the
+      // signal to claude instead and let its exit unwind the normal path.
+      forwardSignals: true,
     });
   } finally {
     rmSync(path, { recursive: true, force: true });

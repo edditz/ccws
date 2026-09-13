@@ -41,6 +41,20 @@ project(登记已有项目)两种 entry,对"随手开一个空会话"来说太�
   try/finally,finally 里 `rmSync(path, {recursive, force})`——claude 正常
   退出、非零退出、启动失败(claude 不在 PATH)三种路径都清理。transcript
   属 claude 资产,`~/.claude/projects` 绝不碰。
+- **信号也不泄漏(`forwardSignals`)**:关终端(内核对前台进程组发
+  SIGHUP)或 `kill <pid>`(SIGTERM)默认直接杀死 ccws,而被杀进程永远不跑
+  JS `finally`——目录必泄漏。故 `runClaudeSession` 加可选 `forwardSignals`
+  (仅 scratch 传):等待期间装 SIGHUP/SIGTERM handler,把信号转发给
+  `child.kill`(定向 kill 只打 ccws,claude 需确保一起退),之后**走自然
+  解包**——等 claude 退出事件让 `waitForExit` resolve、`finally` 照常清理,
+  而非 handler 里直接清理 + `process.exit`。好处:单一清理路径(finally),
+  且清理发生在 claude 完全退出之后,避开与 claude 自身退出时写
+  `~/.claude.json` 的竞态;代价:若 claude 无视信号不退出则一直等(kill -9
+  仍是逃生门,孤儿归 `ccws delete`)。`open`/`resume` 不传该 flag,信号
+  行为不变。顺带修复:`defaultRunner` 的异步 spawn error(EPERM 等)原先
+  `process.exit(1)` 会跳过一切 finally,现改为只打印错误,让同一 error
+  事件把等待 settle 成退出码 1、走正常解包。SIGINT 仍由既有
+  `ignoreSigintWhile` 吸收(claude 独占 Ctrl+C),与本机制无交集。
 - **退出提示替换为丢弃说明**:workspace 已删,resume 已死,claude 自带的
   `Resume this session with:` 提示会误导——复用 `runClaudeSession` 的
   `exitHint` 钩子(既擦除 claude 的提示行,又打印替换文案):
@@ -87,6 +101,7 @@ project(登记已有项目)两种 entry,对"随手开一个空会话"来说太�
 | 生成名与存量撞名(含 plain dir/symlink/dangling) | `!existsSync && !isSymlink` 检查 + 随机后缀重试 |
 | `ccws` 字段被未来 writer 抹掉 | settings.json 发布契约,写进项目 CLAUDE.md 约定;现有 writer 均保留未知字段 |
 | 终端被 kill -9 / 断电留下孤儿 scratch | 不自动清理(用户要求);`ccws delete <name>` 免确认清除 |
+| 关终端(SIGHUP)/ `kill <pid>`(SIGTERM) | `forwardSignals` 转发给 claude,退出后 finally 清理(见关键决策);测试用 `process.emit("SIGHUP", "SIGHUP")` 模拟,避免真信号杀掉测试进程 |
 | 旧版(7 天保留期)留下的带 createdAt 的 scratch | `parseScratchMeta` 容忍多余字段,仍识别为 scratch,可 `delete` 清掉 |
 | `ccws` 字段写入即契约 | 见上 |
 

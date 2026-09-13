@@ -95,6 +95,33 @@ describe("scratchAction", () => {
     expect(process.exitCode).toBe(2);
     expect(existsSync(cwd)).toBe(false);
   });
+  it("discards the workspace when the terminal closes mid-session (SIGHUP forwarded to claude)", async () => {
+    spyOutput();
+    let cwd = "";
+    const children: ChildProcess[] = [];
+    const killed: string[] = [];
+    const runner: Runner = (_cmd, _args, opts) => {
+      cwd = opts.cwd;
+      const c = new EventEmitter() as unknown as ChildProcess;
+      c.kill = ((signal: string) => {
+        killed.push(signal);
+        return true;
+      }) as ChildProcess["kill"];
+      children.push(c);
+      return c;
+    };
+    const p = scratchAction({ root, runner, sessionsRoot, claudeJsonPath });
+    // Terminal closed: the kernel signals the foreground process group; ccws
+    // forwards instead of dying and waits for claude's signal death, so the
+    // normal unwinding (finally) still discards everything.
+    process.emit("SIGHUP", "SIGHUP");
+    expect(killed).toEqual(["SIGHUP"]);
+    children[0].emit("exit", null, "SIGHUP");
+    await p;
+    expect(existsSync(cwd)).toBe(false);
+    expect(readClaudeJson().projects ?? {}).toEqual({});
+    expect(process.exitCode).toBe(1);
+  });
   it("cleans the skeleton up when claude fails to launch", async () => {
     spyOutput();
     const thrower = () => { throw new Error("spawn ENOENT"); };

@@ -17,8 +17,11 @@ export type Runner = (
 export const defaultRunner: Runner = (cmd, args, opts) => {
   const child = spawn(cmd, args, opts);
   child.on("error", () => {
+    // No process.exit here: a hard exit would bypass the caller's finally
+    // (leaking a freshly created scratch workspace). The wait below settles on
+    // the same "error" event, maps it to exit code 1, and lets every cleanup
+    // run before the process ends on its own.
     log.error("`claude` failed to start — not found in PATH or crashed; install Claude Code first");
-    process.exit(1);
   });
   return child;
 };
@@ -86,6 +89,13 @@ export interface RunClaudeSessionOptions {
   isTTY?: boolean;
   /** Test seam only; defaults to ~/.claude/projects. */
   sessionsRoot?: string;
+  /**
+   * Forward SIGHUP/SIGTERM (closed terminal / `kill <pid>`) to claude instead
+   * of dying with the default disposition, so the wait resolves and the
+   * caller's finally-cleanup still runs — scratch's discard-on-close guarantee.
+   * open/resume omit it and keep the default behavior.
+   */
+  forwardSignals?: boolean;
 }
 
 // Resolves with the child's exit code, or null when it dies by signal or errors out
@@ -117,6 +127,35 @@ const ignoreSigintWhile = async <T>(run: () => Promise<T>): Promise<T> => {
   }
 };
 
+// A closed terminal (SIGHUP — the kernel signals the whole foreground process
+// group) or `kill <pid>` (SIGTERM) kills ccws outright unless intercepted, and
+// a killed process never runs its JS `finally` — the scratch discard would leak
+// its directory. Opted-in callers get the signal forwarded to claude instead;
+// the child's exit then resolves the wait, so the caller's finally-cleanup runs
+// after claude has fully exited (no race with claude's own ~/.claude.json
+// shutdown writes). SIGKILL/power loss stay uncatchable — `ccws delete <name>`
+// is the cleanup path for those. Listeners detach as soon as the wait settles.
+const forwardSignalsWhile = async <T>(
+  run: () => Promise<T>,
+  child: ChildProcess,
+  enabled: boolean,
+): Promise<T> => {
+  if (!enabled) return run();
+  const forward = (signal: NodeJS.Signals): void => {
+    // A direct kill may target ccws alone; make sure claude goes down too and
+    // does not outlive the workspace being deleted underneath it.
+    child.kill(signal);
+  };
+  process.on("SIGHUP", forward);
+  process.on("SIGTERM", forward);
+  try {
+    return await run();
+  } finally {
+    process.removeListener("SIGHUP", forward);
+    process.removeListener("SIGTERM", forward);
+  }
+};
+
 export async function runClaudeSession(opts: RunClaudeSessionOptions): Promise<void> {
   const {
     cwd,
@@ -125,6 +164,7 @@ export async function runClaudeSession(opts: RunClaudeSessionOptions): Promise<v
     exitHint,
     isTTY = process.stdout.isTTY === true,
     sessionsRoot = join(homedir(), ".claude", "projects"),
+    forwardSignals = false,
   } = opts;
   const startedAt = Date.now(); // mtime floor: only sessions claude touched during this run count
   let child: ChildProcess | void;
@@ -134,7 +174,9 @@ export async function runClaudeSession(opts: RunClaudeSessionOptions): Promise<v
     throw new Error("`claude` not found in PATH — install Claude Code first");
   }
   if (!child) return; // void-returning runner (test stubs): nothing to wait for
-  const code = await ignoreSigintWhile(() => waitForExit(child));
+  const code = await ignoreSigintWhile(() =>
+    forwardSignalsWhile(() => waitForExit(child), child, forwardSignals),
+  );
   if (code !== 0) {
     // Non-zero exit (or signal/error death): claude's own output — e.g. its
     // "No conversation found with session ID" error — must stay visible.

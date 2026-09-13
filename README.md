@@ -67,11 +67,13 @@ hint and prints a copy-pastable equivalent with the session id recovered from
 **Scratch sessions**: `ccws scratch` is the use-and-discard launcher — it
 creates a blank scratch workspace under `$ROOT`, starts claude in it with
 `bypassPermissions`, and deletes the workspace as soon as claude exits (a
-failed launch cleans up too). Nothing survives the session; transcripts under
-`~/.claude/projects` are claude's own and stay untouched. Scratch sessions are
-invisible in `ls`; `ls <name>` and `status` inside one annotate them. In the
-rare case a scratch is orphaned (e.g. the terminal was killed), `ccws delete
-<name>` removes it without confirmation.
+failed launch cleans up too). Closing the terminal or killing ccws mid-session
+also cleans up: the SIGHUP/SIGTERM is forwarded to claude and the discard runs
+after it exits — only SIGKILL or power loss can orphan a scratch, and `ccws
+delete <name>` removes that without confirmation. Nothing survives the
+session; transcripts under `~/.claude/projects` are claude's own and stay
+untouched. Scratch sessions are
+invisible in `ls`; `ls <name>` and `status` inside one annotate them.
 Scratch sessions never manage directories — `add`/`remove`/`regen` refuse them;
 create a regular workspace for that.
 

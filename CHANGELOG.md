@@ -16,9 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   words joined by hyphens) carries no meaning.
   - `ls` hides scratch sessions entirely (transient by nature) — `ls <name>`
     and `status` inside one annotate them; `ccws delete <name>` removes an
-    orphaned scratch (e.g. after a killed terminal) with no confirmation;
-    `add`/`remove`/`regen` refuse scratch entries with guidance to create a
-    regular workspace.
+    orphaned scratch (only SIGKILL/power loss can orphan one) with no
+    confirmation; `add`/`remove`/`regen` refuse scratch entries with guidance
+    to create a regular workspace.
+  - Closing the terminal (SIGHUP) or `kill <pid>` (SIGTERM) mid-session no
+    longer leaks the workspace: the signal is forwarded to claude and the
+    discard runs after its exit (async spawn failures now unwind the same way
+    instead of hard-exiting past the cleanup).
   - Pre-trusts the fresh scratch cwd in `~/.claude.json`
     (`projects[cwd].hasTrustDialogAccepted`) so claude's "Quick safety check"
     folder-trust dialog does not fire for a directory ccws itself just

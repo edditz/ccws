@@ -179,11 +179,14 @@ describe("runClaudeSession", () => {
     const cwd = "/tmp/ws";
     seedSession(sessionsRoot, cwd, "pre-run-id", new Date(Date.now() - 60_000));
     const runner: Runner = () => {
-      // Seeded between the since-mark (taken just before spawn) and the exit
-      // wait: a real wall-clock mtime only passes the >= filter if the mark
-      // truly precedes the runner call — a future-shifted mtime could not
-      // detect that property.
-      seedSession(sessionsRoot, cwd, "live-id", new Date());
+      // Seeded after the since-mark (taken just before spawn): a real
+      // wall-clock mtime passes the >= filter. Pinned 5s into the future —
+      // seeding "now" lands in the same millisecond as the mark, and the
+      // utimesSync → statSync round-trip on APFS reads back ~1ns low
+      // (902 → 901.999), flakily failing the >= by a nanosecond. Real
+      // session files differ from the spawn mark by a session's duration,
+      // never by microseconds.
+      seedSession(sessionsRoot, cwd, "live-id", new Date(Date.now() + 5_000));
       return exited(0);
     };
     await runClaudeSession({

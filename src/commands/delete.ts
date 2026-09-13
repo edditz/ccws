@@ -3,6 +3,7 @@ import { sep } from "node:path";
 import { resolveRoot, resolveEntry, workspacePath } from "../core/config.js";
 import { removeModeSidecar } from "../core/mode.js";
 import { validateWorkspaceName } from "../core/workspace.js";
+import { isScratchWorkspace } from "../core/scratch.js";
 import { success, info, warn } from "../utils/log.js";
 
 export interface DeleteOptions {
@@ -16,8 +17,9 @@ export interface DeleteOptions {
  * Delete a workspace directory recursively, or unregister a project by
  * removing its $ROOT symlink. Workspace deletion is destructive and
  * irreversible, so by default it asks for confirmation via `@clack/prompts`;
- * `--force` skips the prompt for scripting. Unregistering a project never
- * touches the target directory, so it needs no confirmation. A declined
+ * `--force` skips the prompt for scripting. Scratch workspaces skip the
+ * confirmation too — they are disposable by design. Unregistering a project
+ * never touches the target directory, so it needs no confirmation. A declined
  * confirmation aborts without deleting.
  */
 export async function deleteAction(name: string, opts: DeleteOptions): Promise<void> {
@@ -42,6 +44,9 @@ export async function deleteAction(name: string, opts: DeleteOptions): Promise<v
   }
 
   const path = workspacePath(root, name);
+  // Scratch sessions are disposable by design — no confirmation needed (the
+  // 7-day retention already gave ample warning via ls/status).
+  const scratch = isScratchWorkspace(root, name);
 
   // Deleting the folder your shell is standing in leaves a stale cwd — warn.
   const cwd = process.cwd();
@@ -49,7 +54,7 @@ export async function deleteAction(name: string, opts: DeleteOptions): Promise<v
     warn(`you are currently inside workspace "${name}" — it will be deleted under your cwd`);
   }
 
-  if (!opts.force) {
+  if (!opts.force && !scratch) {
     const confirm = opts.confirmFn ??
       (async (message: string) => {
         const { confirm: clackConfirm, isCancel } = await import("@clack/prompts");
@@ -64,5 +69,7 @@ export async function deleteAction(name: string, opts: DeleteOptions): Promise<v
   }
 
   rmSync(path, { recursive: true, force: true });
-  success(`deleted workspace "${name}" at ${path}`);
+  success(scratch
+    ? `deleted scratch workspace "${name}" at ${path}`
+    : `deleted workspace "${name}" at ${path}`);
 }

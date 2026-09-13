@@ -1,9 +1,9 @@
 import { homedir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
 import { readdirSync, statSync, lstatSync, readlinkSync, realpathSync, existsSync } from "node:fs";
-import { readSettings } from "./settings.js";
+import { readSettings, parseScratchMeta } from "./settings.js";
 import { assertAllExist, isSymlink } from "./paths.js";
-import type { Workspace, Project, Entry } from "../types.js";
+import type { Workspace, Project, Entry, ScratchMeta } from "../types.js";
 
 export function resolveRoot(cliRoot?: string): string {
   if (cliRoot) return resolve(cliRoot);
@@ -51,13 +51,15 @@ export function discoverWorkspaces(root: string): Workspace[] {
   return names.map((name) => {
     let dirs: string[] = [];
     let mode: string | undefined;
+    let scratch: ScratchMeta | undefined;
     try {
       const s = readSettings(settingsPath(root, name));
       dirs = s.permissions?.additionalDirectories ?? [];
       mode = s.permissions?.defaultMode;
+      scratch = parseScratchMeta(s);
     } catch { dirs = []; }
     const missing = assertAllExist(dirs).length;
-    return { name, path: workspacePath(root, name), dirs, missing, mode };
+    return { name, path: workspacePath(root, name), dirs, missing, mode, scratch };
   }).sort((a, b) => a.name.localeCompare(b.name));
 }
 

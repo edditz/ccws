@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `scratch` command: the use-and-discard session launcher. `ccws scratch`
+  creates a blank throwaway workspace under `$ROOT`, launches claude in it
+  (default mode `bypassPermissions`, changeable via `ccws mode`), and deletes
+  the workspace as soon as claude exits — a failed launch cleans up too, so
+  nothing survives the session. Detection is by a `ccws.kind = "scratch"`
+  marker in the entry's settings.json — the name (1-3 random lowercase-letter
+  words joined by hyphens) carries no meaning.
+  - `ls` hides scratch sessions entirely (transient by nature) — `ls <name>`
+    and `status` inside one annotate them; `ccws delete <name>` removes an
+    orphaned scratch (e.g. after a killed terminal) with no confirmation;
+    `add`/`remove`/`regen` refuse scratch entries with guidance to create a
+    regular workspace.
 - `mode` subcommand: get or set the Claude Code permission mode per workspace
   **and** per project — `ccws mode [name] [value]`. Values:
   `acceptEdits`, `auto`, `bypassPermissions`, `manual`, `dontAsk`, `plan`;

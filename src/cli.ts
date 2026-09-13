@@ -12,6 +12,7 @@ import { regenAction } from "./commands/regen.js";
 import { bypassAction } from "./commands/bypass.js";
 import { modeAction } from "./commands/mode.js";
 import { deleteAction } from "./commands/delete.js";
+import { scratchAction } from "./commands/scratch.js";
 import { error } from "./utils/log.js";
 import pkg from "../package.json" with { type: "json" };
 
@@ -188,6 +189,19 @@ export function buildCli(): Command {
     .action(async (name: string, opts) => {
       try {
         await deleteAction(name, opts);
+      } catch (e) {
+        fail(e);
+      }
+    });
+
+  program
+    .command("scratch")
+    .description("create a throwaway scratch workspace, launch claude in it, and discard it when claude exits")
+    .addOption(rootOption())
+    .allowExcessArguments(false)
+    .action(async (opts) => {
+      try {
+        await scratchAction(opts);
       } catch (e) {
         fail(e);
       }

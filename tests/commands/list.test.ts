@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { initAction } from "../../src/commands/init.js";
 import { addAction } from "../../src/commands/add.js";
 import { listAction } from "../../src/commands/list.js";
+import { createScratchWorkspace } from "../../src/core/scratch.js";
 import { settingsPath } from "../../src/core/config.js";
 import { setStoredMode } from "../../src/core/mode.js";
 
@@ -84,5 +85,39 @@ describe("listAction", () => {
     const out4 = capture();
     await listAction(["plain"], { root });
     expect(out4()).not.toContain("mode:");
+  });
+
+  // ——— scratch ———
+
+  it("hides scratch sessions from the listing entirely", async () => {
+    await initAction("demo", { root });
+    const { name } = createScratchWorkspace(root);
+    const out = capture();
+    await listAction([], { root });
+    const text = out();
+    expect(text).toContain("demo");
+    expect(text).not.toContain(name);
+    expect(text).not.toContain("scratch:");
+  });
+  it("hides scratch sessions from the listing in long mode too", async () => {
+    const { name, path } = createScratchWorkspace(root);
+    const out = capture();
+    await listAction([], { root, long: true });
+    expect(out()).not.toContain(name);
+    expect(out()).not.toContain(path);
+  });
+  it("annotates a scratch entry in the single-name view", async () => {
+    const { name } = createScratchWorkspace(root);
+    const out = capture();
+    await listAction([name], { root });
+    const text = out();
+    expect(text).toContain(`workspace: ${name}`);
+    expect(text).toContain("scratch session — discarded when claude exits");
+  });
+  it("reports the empty state as workspaces/projects (scratch stays invisible)", async () => {
+    createScratchWorkspace(root);
+    const out = capture();
+    await listAction([], { root });
+    expect(out()).toContain("no workspaces or projects found");
   });
 });

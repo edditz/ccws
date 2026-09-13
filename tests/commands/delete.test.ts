@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initAction } from "../../src/commands/init.js";
 import { deleteAction } from "../../src/commands/delete.js";
+import { createScratchWorkspace } from "../../src/core/scratch.js";
 import { workspaceExists } from "../../src/core/workspace.js";
 import { workspacePath, modeSidecarPath } from "../../src/core/config.js";
 import { setStoredMode } from "../../src/core/mode.js";
@@ -47,6 +48,21 @@ describe("deleteAction", () => {
     await deleteAction("demo", { root, force: true, confirmFn });
     expect(confirmFn).not.toHaveBeenCalled();
     expect(workspaceExists(root, "demo")).toBe(false);
+  });
+
+  it("deletes a scratch workspace without confirmation (disposable by design)", async () => {
+    const { name } = createScratchWorkspace(root);
+    const confirmFn = vi.fn().mockResolvedValue(true);
+    const out: string[] = [];
+    vi.spyOn(process.stdout, "write").mockImplementation((c) => { out.push(String(c)); return true; });
+    try {
+      await deleteAction(name, { root, confirmFn });
+    } finally {
+      vi.restoreAllMocks();
+    }
+    expect(confirmFn).not.toHaveBeenCalled();
+    expect(existsSync(workspacePath(root, name))).toBe(false);
+    expect(out.join("")).toContain("scratch");
   });
 
   it("fails fast when the workspace does not exist", async () => {

@@ -7,7 +7,7 @@ import {
   workspacePath,
 } from "../core/config.js";
 import type { Project } from "../types.js";
-import { readSettings } from "../core/settings.js";
+import { readSettings, parseScratchMeta } from "../core/settings.js";
 import { resolveStoredMode } from "../core/mode.js";
 import { existsSync } from "node:fs";
 import { info } from "../utils/log.js";
@@ -48,12 +48,19 @@ export async function listAction(args: string[], opts: ListOptions): Promise<voi
     const header = `workspace: ${name}  (${workspacePath(root, name)})`;
     const detail = long ? `  ${modeLabel(settings.permissions?.defaultMode)}` : "";
     info(`${header}${detail}`);
+    if (parseScratchMeta(settings)) {
+      info("scratch session — discarded when claude exits");
+    }
     for (const d of dirs) {
       process.stdout.write(existsSync(d) ? `  ✓  ${d}\n` : `  ✗  ${d}  (missing)\n`);
     }
     return;
   }
-  const ws = discoverWorkspaces(root);
+  // Scratch sessions are deliberately invisible here: they are numerous,
+  // transient, and auto-collected. `ls <name>` (explicit query), `status`
+  // (inside one), and `scratch clean --dry-run` (expired ones) remain the
+  // explicit windows into them.
+  const ws = discoverWorkspaces(root).filter((w) => w.scratch === undefined);
   const projects = discoverProjects(root);
   if (ws.length === 0 && projects.length === 0) {
     info("no workspaces or projects found");

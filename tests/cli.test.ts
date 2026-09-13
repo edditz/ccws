@@ -18,7 +18,7 @@ describe("cli", () => {
   it("builds with version and all subcommands", () => {
     const program = buildCli();
     const names = program.commands.map((c) => c.name());
-    for (const n of ["init", "add", "remove", "list", "status", "open", "resume", "update", "regen", "bypass", "mode", "delete"]) {
+    for (const n of ["init", "add", "remove", "list", "status", "open", "resume", "update", "regen", "bypass", "mode", "delete", "scratch"]) {
       expect(names).toContain(n);
     }
   });
@@ -32,7 +32,7 @@ describe("cli", () => {
 
   it("registers -r/--root on every workspace subcommand (update intentionally excluded)", () => {
     const program = buildCli();
-    for (const n of ["init", "add", "remove", "list", "status", "open", "resume", "regen", "bypass", "mode", "delete"]) {
+    for (const n of ["init", "add", "remove", "list", "status", "open", "resume", "regen", "bypass", "mode", "delete", "scratch"]) {
       const cmd = program.commands.find((c) => c.name() === n);
       expect(cmd).toBeDefined();
       expect(cmd!.options.map((o) => o.long)).toContain("--root");

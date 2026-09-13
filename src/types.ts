@@ -4,7 +4,20 @@ export interface SettingsJson {
     defaultMode?: string;
     [key: string]: unknown;
   };
+  /**
+   * ccws-private metadata. `kind === "scratch"` marks a throwaway workspace
+   * (discarded when its claude session exits). Published field: every settings
+   * writer must keep preserving it like any other unknown top-level key.
+   */
+  ccws?: ScratchMeta;
   [key: string]: unknown;
+}
+
+/** Marker stored under `SettingsJson.ccws`; presence of kind "scratch" is the
+ *  ONLY thing that makes a workspace a scratch session (name prefixes are
+ *  readability only). Extra fields (e.g. a legacy createdAt) are tolerated. */
+export interface ScratchMeta {
+  kind: "scratch";
 }
 
 export interface Workspace {
@@ -14,6 +27,8 @@ export interface Workspace {
   missing: number;
   /** Raw `permissions.defaultMode` when set (undefined = Claude's default). */
   mode?: string;
+  /** Parsed `ccws` marker — set only for scratch workspaces with intact settings. */
+  scratch?: ScratchMeta;
 }
 
 /**

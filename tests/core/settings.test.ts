@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { mkdtempSync, writeFileSync, readFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readSettings, writeAdditionalDirs, setAdditionalDirs, setDefaultMode } from "../../src/core/settings.js";
+import { readSettings, writeAdditionalDirs, setAdditionalDirs, setDefaultMode, parseScratchMeta } from "../../src/core/settings.js";
 
 let dir: string;
 let settingsFile: string;
@@ -139,5 +139,25 @@ describe("setDefaultMode", () => {
     writeFileSync(settingsFile, "{ not json");
     expect(() => setDefaultMode(settingsFile, "plan")).toThrow(/corrupt|parse/i);
     expect(readFileSync(settingsFile, "utf8")).toBe("{ not json");
+  });
+});
+
+describe("parseScratchMeta", () => {
+  it("parses a well-formed scratch marker", () => {
+    expect(parseScratchMeta({ ccws: { kind: "scratch" } })).toEqual({ kind: "scratch" });
+  });
+  it("tolerates and drops extra fields inside the marker (legacy createdAt)", () => {
+    expect(parseScratchMeta({ ccws: { kind: "scratch", createdAt: "2026-09-13T00:00:00.000Z" } as never }))
+      .toEqual({ kind: "scratch" });
+  });
+  it("returns undefined without a ccws field", () => {
+    expect(parseScratchMeta({ permissions: {} })).toBeUndefined();
+  });
+  it("returns undefined for a non-scratch kind", () => {
+    expect(parseScratchMeta({ ccws: { kind: "other" } as never })).toBeUndefined();
+  });
+  it("returns undefined for a non-object ccws field", () => {
+    expect(parseScratchMeta({ ccws: "scratch" as never })).toBeUndefined();
+    expect(parseScratchMeta({ ccws: null as never })).toBeUndefined();
   });
 });

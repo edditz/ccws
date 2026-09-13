@@ -1,6 +1,20 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import type { SettingsJson } from "../types.js";
+import type { ScratchMeta, SettingsJson } from "../types.js";
 import { dedupe } from "./paths.js";
+
+/**
+ * Extract the scratch marker from parsed settings. Strict on the one field
+ * that matters: anything but an object with `kind === "scratch"` returns
+ * undefined, so a malformed marker degrades the entry to a regular workspace
+ * (never treated as disposable) rather than guessing. Extra fields inside the
+ * marker (e.g. a legacy createdAt) are tolerated and dropped.
+ */
+export function parseScratchMeta(settings: SettingsJson): ScratchMeta | undefined {
+  const raw = settings?.ccws;
+  if (typeof raw !== "object" || raw === null) return undefined;
+  if (raw.kind !== "scratch") return undefined;
+  return { kind: "scratch" };
+}
 
 export function readSettings(settingsPath: string): SettingsJson {
   if (!existsSync(settingsPath)) {

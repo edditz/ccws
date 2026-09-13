@@ -1,5 +1,6 @@
 import { resolveRoot, detectWorkspaceFromCwd, claudeMdPath } from "../core/config.js";
-import { requireWorkspace, validateWorkspaceName } from "../core/workspace.js";
+import { validateWorkspaceName } from "../core/workspace.js";
+import { requireNonScratchWorkspace } from "../core/scratch.js";
 import {
   forceRewriteClaudeMd,
   readDirEntries,
@@ -24,7 +25,7 @@ export async function regenAction(
     );
   }
   validateWorkspaceName(ws);
-  requireWorkspace(root, ws);
+  requireNonScratchWorkspace(root, ws);
 
   if (opts.force) {
     forceRewriteClaudeMd(claudeMdPath(root, ws), readDirEntries(root, ws));

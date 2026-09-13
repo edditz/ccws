@@ -43,6 +43,7 @@ ccws open my-work                      # launch claude in my-work
 ccws resume my-work                    # relaunch claude, pick a past session
 ccws resume my-work <session-id>       # continue that exact session
 ccws remove ~/projects/web -w my-work
+ccws scratch                           # throwaway session: create a scratch workspace, launch claude, discard it on exit
 ccws mode auto                         # set the permission mode for the cwd entry
 ccws mode my-work plan                 # or target it by name (workspaces AND projects)
 ccws mode                              # show the current mode (from inside the entry)
@@ -62,6 +63,17 @@ code. On a clean exit ccws erases claude's own `Resume this session with:`
 hint and prints a copy-pastable equivalent with the session id recovered from
 `~/.claude/projects/`: `resume this session: ccws resume <name> <session-id>`
 (id-less when no session matches the run).
+
+**Scratch sessions**: `ccws scratch` is the use-and-discard launcher — it
+creates a blank scratch workspace under `$ROOT`, starts claude in it with
+`bypassPermissions`, and deletes the workspace as soon as claude exits (a
+failed launch cleans up too). Nothing survives the session; transcripts under
+`~/.claude/projects` are claude's own and stay untouched. Scratch sessions are
+invisible in `ls`; `ls <name>` and `status` inside one annotate them. In the
+rare case a scratch is orphaned (e.g. the terminal was killed), `ccws delete
+<name>` removes it without confirmation.
+Scratch sessions never manage directories — `add`/`remove`/`regen` refuse them;
+create a regular workspace for that.
 
 > **Security note**: `ccws mode` sets Claude Code's permission mode per entry.
 > Claude Code ≥ 2.1.257 ignores `bypassPermissions`/`auto` set in a

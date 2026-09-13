@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { initAction } from "../../src/commands/init.js";
 import { addAction } from "../../src/commands/add.js";
 import { regenAction } from "../../src/commands/regen.js";
+import { createScratchWorkspace } from "../../src/core/scratch.js";
 import { claudeMdPath } from "../../src/core/config.js";
 import { BEGIN, END } from "../../src/core/claude-md.js";
 
@@ -123,5 +124,10 @@ describe("regenAction", () => {
 
   it("rejects an invalid name (path separator)", async () => {
     await expect(regenAction("evil/child", { root })).rejects.toThrow(/invalid.*name/i);
+  });
+
+  it("rejects a scratch workspace with init guidance", async () => {
+    const { name } = createScratchWorkspace(root);
+    await expect(regenAction(name, { root })).rejects.toThrow(/scratch/i);
   });
 });

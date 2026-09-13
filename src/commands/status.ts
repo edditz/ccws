@@ -7,7 +7,7 @@ import {
   workspacePath,
 } from "../core/config.js";
 import type { Entry } from "../types.js";
-import { readSettings } from "../core/settings.js";
+import { readSettings, parseScratchMeta } from "../core/settings.js";
 import { resolveStoredMode } from "../core/mode.js";
 import { existsSync } from "node:fs";
 import { info, warn } from "../utils/log.js";
@@ -60,6 +60,9 @@ export async function statusAction(opts: StatusOptions): Promise<void> {
   const rawMode = settings.permissions?.defaultMode;
   info(`workspace: ${name}  (${workspacePath(root, name)})`);
   info(`mode: ${typeof rawMode === "string" ? rawMode : "default"}`);
+  if (parseScratchMeta(settings)) {
+    info("scratch session — discarded when claude exits");
+  }
   for (const d of dirs) {
     process.stdout.write(existsSync(d) ? `  ✓  ${d}\n` : `  ✗  ${d}  (missing)\n`);
   }

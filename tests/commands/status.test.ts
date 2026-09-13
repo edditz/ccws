@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initAction } from "../../src/commands/init.js";
 import { statusAction } from "../../src/commands/status.js";
+import { createScratchWorkspace } from "../../src/core/scratch.js";
 import { settingsPath } from "../../src/core/config.js";
 import { setStoredMode } from "../../src/core/mode.js";
 
@@ -78,5 +79,15 @@ describe("statusAction", () => {
     await statusAction({ root, cwd: target });
     expect(out()).toContain("project: myproj");
     expect(out()).toContain("mode: auto");
+  });
+
+  it("annotates a scratch session when cwd is inside it", async () => {
+    const { name } = createScratchWorkspace(root);
+    const out = capture();
+    await statusAction({ root, cwd: join(root, name) });
+    const text = out();
+    expect(text).toContain(`workspace: ${name}`);
+    expect(text).toContain("mode: bypassPermissions");
+    expect(text).toContain("scratch session — discarded when claude exits");
   });
 });

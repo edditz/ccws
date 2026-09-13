@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initAction } from "../../src/commands/init.js";
 import { addAction } from "../../src/commands/add.js";
+import { createScratchWorkspace } from "../../src/core/scratch.js";
 import { claudeMdPath, settingsPath } from "../../src/core/config.js";
 
 let root: string;
@@ -43,6 +44,12 @@ describe("addAction", () => {
   });
   it("rejects an invalid --workspace name (path separator)", async () => {
     await expect(addAction([realDir], { root, workspace: "evil/child" })).rejects.toThrow(/invalid.*name/i);
+  });
+  it("rejects a scratch workspace with init guidance — settings unchanged", async () => {
+    const { name } = createScratchWorkspace(root);
+    const before = readFileSync(settingsPath(root, name), "utf8");
+    await expect(addAction([realDir], { root, workspace: name })).rejects.toThrow(/scratch/i);
+    expect(readFileSync(settingsPath(root, name), "utf8")).toBe(before);
   });
 
   it("infers the workspace name from cwd when --workspace is omitted", async () => {

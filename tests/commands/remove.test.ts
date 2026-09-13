@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { initAction } from "../../src/commands/init.js";
 import { addAction } from "../../src/commands/add.js";
 import { removeAction } from "../../src/commands/remove.js";
+import { createScratchWorkspace } from "../../src/core/scratch.js";
 import { claudeMdPath, settingsPath } from "../../src/core/config.js";
 
 let root: string;
@@ -47,6 +48,10 @@ describe("removeAction", () => {
   });
   it("rejects an invalid --workspace name (path separator)", async () => {
     await expect(removeAction([a], { root, workspace: "evil/child" })).rejects.toThrow(/invalid.*name/i);
+  });
+  it("rejects a scratch workspace with init guidance", async () => {
+    const { name } = createScratchWorkspace(root);
+    await expect(removeAction([a], { root, workspace: name })).rejects.toThrow(/scratch/i);
   });
   it("is atomic: settings unchanged when nothing matches", async () => {
     await initAction("demo", { root });

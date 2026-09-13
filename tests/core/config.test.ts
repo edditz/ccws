@@ -91,4 +91,23 @@ describe("discoverWorkspaces", () => {
     expect(discoverWorkspaces(root).map((w) => w.name)).toEqual([]);
     expect(discoverProjects(root).map((p) => p.name)).toEqual(["proj"]);
   });
+  it("carries the scratch marker through for scratch workspaces only", () => {
+    mkdirSync(join(root, "scratch-1", ".claude"), { recursive: true });
+    writeFileSync(join(root, "scratch-1", ".claude", "settings.json"),
+      JSON.stringify({ permissions: { additionalDirectories: [] }, ccws: { kind: "scratch" } }));
+    mkdirSync(join(root, "plain", ".claude"), { recursive: true });
+    writeFileSync(join(root, "plain", ".claude", "settings.json"),
+      JSON.stringify({ permissions: { additionalDirectories: [] } }));
+
+    const byName = Object.fromEntries(discoverWorkspaces(root).map((w) => [w.name, w.scratch]));
+    expect(byName).toEqual({
+      "scratch-1": { kind: "scratch" },
+      plain: undefined,
+    });
+  });
+  it("leaves scratch undefined when settings are corrupt", () => {
+    mkdirSync(join(root, "broken", ".claude"), { recursive: true });
+    writeFileSync(join(root, "broken", ".claude", "settings.json"), "{ not json");
+    expect(discoverWorkspaces(root)[0].scratch).toBeUndefined();
+  });
 });

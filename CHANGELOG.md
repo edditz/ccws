@@ -4,9 +4,23 @@ All notable changes to ccws are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.3.0] - 2026-09-13
 
 ### Added
+- Single-project management alongside workspaces: `ccws init <path>` registers
+  an existing project directory (wherever it lives on disk) as a symlink under
+  $ROOT; workspaces and projects share one namespace, so every name-taking
+  command recognizes both.
+  - `open`/`resume` launch claude in the project's real path with the full
+    exit-hint and session-recovery experience; `ls` lists both kinds as
+    labeled groups (projects sorted by recent activity); `status` detects a
+    project from a cwd inside it; `delete` unregisters a project by removing
+    only the symlink — the project directory is never touched, so no
+    confirmation is asked.
+  - Projects are strictly read-only to ccws: `add`/`remove`/`regen`/`bypass`
+    reject them explicitly, and nothing is ever written into the project.
+  - Dangling registrations (target moved/deleted) are surfaced with
+    `target missing` markers and `ccws delete` cleanup guidance.
 - `resume` subcommand: `ccws resume <name> [session-id]` relaunches claude in
   the workspace and resumes a session, mirroring claude's native semantics —
   with a session-id it runs `claude --resume <id>`; without one it opens
@@ -17,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   during the run), so the line is copy-pastable as-is. When nothing matches
   (claude exited without creating a session, or the directory layout changed),
   the hint falls back to the id-less form.
+- `ls -l/--long`: show each workspace's path and bypass status.
+- `delete` (`rm`) subcommand: recursively remove a workspace after an
+  interactive confirmation (`--force` skips it).
+- `bypass [on|off]` subcommand: toggle a workspace's
+  `permissions.defaultMode: "bypassPermissions"`; bare `ccws bypass` prints
+  the current mode.
 
 ### Changed
 - `open` and `resume` now stay attached until claude exits (instead of
@@ -80,7 +100,8 @@ First public release.
 - Project site at https://edditz.github.io/ccws/.
 - MIT license.
 
-[Unreleased]: https://github.com/edditz/ccws/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/edditz/ccws/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/edditz/ccws/releases/tag/v1.3.0
 [1.2.0]: https://github.com/edditz/ccws/releases/tag/v1.2.0
 [1.1.0]: https://github.com/edditz/ccws/releases/tag/v1.1.0
 [1.0.0]: https://github.com/edditz/ccws/releases/tag/v1.0.0

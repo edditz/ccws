@@ -83,8 +83,11 @@ create a regular workspace for that.
 > (`permissions.defaultMode`); projects store it in a sidecar under
 > `$ROOT/.ccws/modes/<name>` — ccws never writes into a project's target
 > directory. `bypassPermissions` skips permission confirmation prompts — only
-> enable it for entries you fully trust; Claude Code still asks for
-> confirmation the first time a session enters bypass mode.
+> enable it for entries you fully trust. Scratch sessions get it by default;
+> since every scratch is a fresh (randomly named) directory, claude's
+> "Quick safety check" folder-trust dialog would fire every time — ccws
+> pre-trusts the cwd it just created in `~/.claude.json` and drops that entry
+> again when the scratch is discarded, leaving the file byte-identical.
 
 ## Development
 

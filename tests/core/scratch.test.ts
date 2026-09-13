@@ -8,6 +8,8 @@ import {
   readScratchMeta,
   isScratchWorkspace,
   requireNonScratchWorkspace,
+  markCwdTrusted,
+  removeCwdEntry,
 } from "../../src/core/scratch.js";
 import { workspacePath, settingsPath } from "../../src/core/config.js";
 import { createWorkspace } from "../../src/core/workspace.js";
@@ -118,5 +120,56 @@ describe("requireNonScratchWorkspace", () => {
   });
   it("keeps requireWorkspace's guards for missing entries", () => {
     expect(() => requireNonScratchWorkspace(root, "nope")).toThrow(/ccws init/);
+  });
+});
+
+describe("markCwdTrusted / removeCwdEntry (~/.claude.json trust memory)", () => {
+  let claudeJson: string;
+  beforeEach(() => {
+    claudeJson = join(root, "claude.json");
+  });
+  const read = (): Record<string, unknown> => JSON.parse(readFileSync(claudeJson, "utf8"));
+
+  it("creates the projects map when the file is missing", () => {
+    markCwdTrusted(claudeJson, "/tmp/scratch-a");
+    expect(read()).toEqual({ projects: { "/tmp/scratch-a": { hasTrustDialogAccepted: true } } });
+  });
+  const projectsOf = (): Record<string, unknown> => {
+    const p = read().projects;
+    return typeof p === "object" && p !== null ? (p as Record<string, unknown>) : {};
+  };
+
+  it("merges into existing projects without touching other entries or keys", () => {
+    writeFileSync(claudeJson, JSON.stringify({
+      numStartups: 42,
+      projects: { "/keep": { hasTrustDialogAccepted: true, history: ["x"] } },
+    }));
+    markCwdTrusted(claudeJson, "/tmp/scratch-a");
+    expect(read().numStartups).toBe(42);
+    expect(projectsOf()["/keep"]).toEqual({ hasTrustDialogAccepted: true, history: ["x"] });
+    expect(projectsOf()["/tmp/scratch-a"]).toEqual({ hasTrustDialogAccepted: true });
+  });
+  it("preserves fields claude wrote into an existing entry for that cwd", () => {
+    writeFileSync(claudeJson, JSON.stringify({ projects: { "/tmp/scratch-a": { allowedTools: ["Bash"] } } }));
+    markCwdTrusted(claudeJson, "/tmp/scratch-a");
+    expect(projectsOf()["/tmp/scratch-a"]).toEqual({ allowedTools: ["Bash"], hasTrustDialogAccepted: true });
+  });
+  it("never overwrites a corrupt file (best-effort: dialog would just show once)", () => {
+    writeFileSync(claudeJson, "{ not json");
+    markCwdTrusted(claudeJson, "/tmp/scratch-a");
+    expect(readFileSync(claudeJson, "utf8")).toBe("{ not json");
+  });
+  it("removes the cwd's entry while keeping the rest", () => {
+    writeFileSync(claudeJson, JSON.stringify({
+      projects: { "/keep": { hasTrustDialogAccepted: true }, "/tmp/scratch-a": { hasTrustDialogAccepted: true } },
+    }));
+    removeCwdEntry(claudeJson, "/tmp/scratch-a");
+    expect(projectsOf()).toEqual({ "/keep": { hasTrustDialogAccepted: true } });
+  });
+  it("removeCwdEntry is silent on missing or corrupt files", () => {
+    expect(() => removeCwdEntry(claudeJson, "/tmp/scratch-a")).not.toThrow();
+    writeFileSync(claudeJson, "{ not json");
+    expect(() => removeCwdEntry(claudeJson, "/tmp/scratch-a")).not.toThrow();
+    expect(readFileSync(claudeJson, "utf8")).toBe("{ not json");
   });
 });

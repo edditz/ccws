@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
     orphaned scratch (e.g. after a killed terminal) with no confirmation;
     `add`/`remove`/`regen` refuse scratch entries with guidance to create a
     regular workspace.
+  - Pre-trusts the fresh scratch cwd in `~/.claude.json`
+    (`projects[cwd].hasTrustDialogAccepted`) so claude's "Quick safety check"
+    folder-trust dialog does not fire for a directory ccws itself just
+    created; the entry is dropped again on discard (the file stays
+    byte-identical after the round-trip; a corrupt config is never touched).
 - `mode` subcommand: get or set the Claude Code permission mode per workspace
   **and** per project — `ccws mode [name] [value]`. Values:
   `acceptEdits`, `auto`, `bypassPermissions`, `manual`, `dontAsk`, `plan`;

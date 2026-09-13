@@ -60,6 +60,23 @@ project(登记已有项目)两种 entry,对"随手开一个空会话"来说太�
 - **`delete` 对 scratch 免确认**:marker 命中跳过 confirm——用完即弃
   语义;这是异常残留(如终端被 kill -9 留下的孤儿 scratch)的唯一清理
   路径,**没有任何自动清理机制**(按用户要求最小化)。
+- **信任预写(`markCwdTrusted`/`removeCwdEntry`)**:用户反馈每次
+  scratch 都弹 "Quick safety check"。对 claude 2.1.236 二进制逆向核实:
+  该对话框是**目录信任检查**,信任按 cwd 精确字符串记忆在
+  `~/.claude.json` 的 `projects[cwd].hasTrustDialogAccepted`;随机新目录
+  每次必弹,`IS_SANDBOX` 等 env 不门控它(7 处出现逐一排查,均为
+  sandbox 探测/registry 扫描/root 检查)。scratch 的 cwd 是 ccws 刚创建
+  并全权拥有的目录,预信任无安全损失——spawn 前写入标记,丢弃时删除
+  条目。corrupt 的 `~/.claude.json` 绝不覆盖(镜像 readSettings 哲学);
+  序列化 2-space 不带尾换行以字节对齐 claude 自身格式,mark+remove 往返
+  零残留(已用真实文件冒烟验证 diff 为空)。
+
+## 外部契约(claude 升级需复校)
+
+- `~/.claude.json` 的 `projects[cwd].hasTrustDialogAccepted`(claude
+  2.1.236 实测):目录信任按 cwd 精确字符串记忆,接受对话框即写此字段。
+  与 `CLAUDE_EXIT_HINT_LINES`/munge 规则同级的第三个 claude 外部契约。
+- `CLAUDE_EXIT_HINT_LINES`、`--permission-mode` 取值集:复用不变。
 
 ## 边界情况(已定对策)
 

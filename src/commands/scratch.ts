@@ -1,6 +1,8 @@
 import { rmSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { resolveRoot } from "../core/config.js";
-import { createScratchWorkspace } from "../core/scratch.js";
+import { createScratchWorkspace, markCwdTrusted, removeCwdEntry } from "../core/scratch.js";
 import { resolveLaunchTarget, launchModeArgs, type Runner } from "./open.js";
 import { runClaudeSession } from "../utils/claude-session.js";
 import { success } from "../utils/log.js";
@@ -12,6 +14,8 @@ export interface ScratchOptions {
   runner?: Runner;
   /** Test seam only; defaults to ~/.claude/projects. */
   sessionsRoot?: string;
+  /** Test seam only; defaults to ~/.claude.json. */
+  claudeJsonPath?: string;
 }
 
 /**
@@ -24,8 +28,13 @@ export interface ScratchOptions {
  */
 export async function scratchAction(opts: ScratchOptions): Promise<void> {
   const root = resolveRoot(opts.root);
+  const claudeJsonPath = opts.claudeJsonPath ?? join(homedir(), ".claude.json");
   const { name, path } = createScratchWorkspace(root);
   success(`created scratch workspace "${name}" at ${path} — discarded when claude exits`);
+  // Pre-trust the fresh cwd in claude's memory so its "Quick safety check"
+  // folder-trust dialog does not fire for a directory ccws itself just
+  // created. Best-effort: on failure claude simply asks once, as before.
+  markCwdTrusted(claudeJsonPath, path);
   const { entry, cwd } = resolveLaunchTarget(root, name);
   try {
     await runClaudeSession({
@@ -39,5 +48,6 @@ export async function scratchAction(opts: ScratchOptions): Promise<void> {
     });
   } finally {
     rmSync(path, { recursive: true, force: true });
+    removeCwdEntry(claudeJsonPath, path);
   }
 }

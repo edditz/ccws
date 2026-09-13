@@ -1,4 +1,4 @@
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { workspacePath, settingsPath } from "./config.js";
 import { readSettings, parseScratchMeta, setDefaultMode, BYPASS_MODE } from "./settings.js";
 import { createWorkspace, requireWorkspace } from "./workspace.js";
@@ -91,5 +91,70 @@ export function requireNonScratchWorkspace(root: string, name: string): void {
     throw new Error(
       `"${name}" is a scratch workspace — scratch sessions don't manage directories; create a regular workspace with \`ccws init <name>\` and \`ccws add\` to it`,
     );
+  }
+}
+
+// Claude Code remembers folder trust per exact cwd string in ~/.claude.json's
+// `projects[cwd].hasTrustDialogAccepted` (verified against claude 2.1.236 —
+// "Quick safety check" is that trust dialog, shown for every untrusted cwd).
+// A fresh scratch dir would trigger it on every launch, so ccws pre-trusts the
+// cwd it just created and fully owns, and drops the entry again on discard.
+// Same contract class as CLAUDE_EXIT_HINT_LINES / mungeProjectDir: re-verify
+// against the installed claude when upgrading.
+
+type ClaudeConfig = { projects?: Record<string, Record<string, unknown>> };
+
+const readClaudeConfig = (claudeJsonPath: string): ClaudeConfig | undefined => {
+  let raw: string;
+  try {
+    raw = readFileSync(claudeJsonPath, "utf8");
+  } catch {
+    return {}; // missing file — a fresh minimal one is safe to create
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
+    return parsed as ClaudeConfig;
+  } catch {
+    return undefined; // corrupt — never overwrite claude's config
+  }
+};
+
+const writeClaudeConfig = (claudeJsonPath: string, config: ClaudeConfig): void => {
+  // No trailing newline: byte-match claude's own serialization of this file,
+  // so a mark+remove round-trip leaves it untouched.
+  writeFileSync(claudeJsonPath, JSON.stringify(config, null, 2), "utf8");
+};
+
+/**
+ * Best-effort: pre-trust `cwd` in claude's config so the scratch session
+ * launches without the folder-trust dialog. Silent on any failure — the worst
+ * case is the dialog showing once, exactly as before.
+ */
+export function markCwdTrusted(claudeJsonPath: string, cwd: string): void {
+  const config = readClaudeConfig(claudeJsonPath);
+  if (config === undefined) return;
+  const projects = { ...(config.projects ?? {}) };
+  const entry = { ...(projects[cwd] ?? {}), hasTrustDialogAccepted: true };
+  try {
+    writeClaudeConfig(claudeJsonPath, { ...config, projects: { ...projects, [cwd]: entry } });
+  } catch {
+    // unreadable/locked config — leave it; claude will just ask once
+  }
+}
+
+/**
+ * Best-effort: drop the scratch cwd's entry from claude's config once the
+ * directory is discarded, so trust memory does not accumulate orphans.
+ * Silent on any failure.
+ */
+export function removeCwdEntry(claudeJsonPath: string, cwd: string): void {
+  const config = readClaudeConfig(claudeJsonPath);
+  if (config === undefined || config.projects === undefined || !(cwd in config.projects)) return;
+  const { [cwd]: _drop, ...rest } = config.projects;
+  try {
+    writeClaudeConfig(claudeJsonPath, { ...config, projects: rest });
+  } catch {
+    // best-effort only
   }
 }

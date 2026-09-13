@@ -6,6 +6,7 @@ import { removeAction } from "./commands/remove.js";
 import { listAction } from "./commands/list.js";
 import { statusAction } from "./commands/status.js";
 import { openAction } from "./commands/open.js";
+import { resumeAction } from "./commands/resume.js";
 import { updateAction } from "./commands/update.js";
 import { regenAction } from "./commands/regen.js";
 import { bypassAction } from "./commands/bypass.js";
@@ -104,6 +105,18 @@ export function buildCli(): Command {
     .action(async (name: string, opts) => {
       try {
         await openAction(name, opts);
+      } catch (e) {
+        fail(e);
+      }
+    });
+
+  program
+    .command("resume <name> [session-id]")
+    .description("resume a claude session in a workspace (session picker without session-id)")
+    .addOption(rootOption())
+    .action(async (name: string, sessionId: string | undefined, opts) => {
+      try {
+        await resumeAction(name, sessionId, opts);
       } catch (e) {
         fail(e);
       }

@@ -4,6 +4,27 @@ All notable changes to ccws are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- `resume` subcommand: `ccws resume <name> [session-id]` relaunches claude in
+  the workspace and resumes a session, mirroring claude's native semantics —
+  with a session-id it runs `claude --resume <id>`; without one it opens
+  claude's interactive session picker.
+- Exit hints now carry the session id: on a clean exit, `open`/`resume` print
+  `resume this session: ccws resume <name> <session-id>` with the id recovered
+  from `~/.claude/projects/` (newest session jsonl for the workspace touched
+  during the run), so the line is copy-pastable as-is. When nothing matches
+  (claude exited without creating a session, or the directory layout changed),
+  the hint falls back to the id-less form.
+
+### Changed
+- `open` and `resume` now stay attached until claude exits (instead of
+  fire-and-forget) and propagate its exit code. On a clean exit they erase
+  claude's own `Resume this session with: claude --resume <id>` hint and print
+  the ccws equivalent (`resume this session: ccws resume <name>`); non-zero
+  exits are left untouched so claude's own errors stay visible.
+
 ## [1.2.0] - 2026-07-30
 
 ### Added
@@ -59,6 +80,7 @@ First public release.
 - Project site at https://edditz.github.io/ccws/.
 - MIT license.
 
+[Unreleased]: https://github.com/edditz/ccws/compare/v1.2.0...HEAD
 [1.2.0]: https://github.com/edditz/ccws/releases/tag/v1.2.0
 [1.1.0]: https://github.com/edditz/ccws/releases/tag/v1.1.0
 [1.0.0]: https://github.com/edditz/ccws/releases/tag/v1.0.0

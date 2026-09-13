@@ -29,5 +29,6 @@ Thumbs.db
 # editor
 .vscode/
 .idea/
+*.sw?
 
 image-cards

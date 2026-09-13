@@ -18,7 +18,7 @@ describe("cli", () => {
   it("builds with version and all subcommands", () => {
     const program = buildCli();
     const names = program.commands.map((c) => c.name());
-    for (const n of ["init", "add", "remove", "list", "status", "open", "update", "regen", "bypass", "delete"]) {
+    for (const n of ["init", "add", "remove", "list", "status", "open", "resume", "update", "regen", "bypass", "delete"]) {
       expect(names).toContain(n);
     }
   });
@@ -32,7 +32,7 @@ describe("cli", () => {
 
   it("registers -r/--root on every workspace subcommand (update intentionally excluded)", () => {
     const program = buildCli();
-    for (const n of ["init", "add", "remove", "list", "status", "open", "regen", "bypass", "delete"]) {
+    for (const n of ["init", "add", "remove", "list", "status", "open", "resume", "regen", "bypass", "delete"]) {
       const cmd = program.commands.find((c) => c.name() === n);
       expect(cmd).toBeDefined();
       expect(cmd!.options.map((o) => o.long)).toContain("--root");
@@ -68,6 +68,16 @@ describe("cli", () => {
     const flags = list!.options.map((o) => o.long);
     expect(flags).toContain("--long");
     expect(list!.options.map((o) => o.short)).toContain("-l");
+  });
+
+  it("registers resume with <name> required and [session-id] optional", () => {
+    const program = buildCli();
+    const resume = program.commands.find((c) => c.name() === "resume");
+    expect(resume).toBeDefined();
+    // commander v15 exposes positional arguments via registeredArguments.
+    const args = resume!.registeredArguments.map((a) => [a.name(), a.required]);
+    expect(args).toContainEqual(["name", true]);
+    expect(args).toContainEqual(["session-id", false]);
   });
 
   it("reports a version", () => {

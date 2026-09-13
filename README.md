@@ -39,6 +39,8 @@ ccws list my-work                      # show my-work's directories
 ccws list my-work -l                   # also show my-work's bypass status
 ccws status                            # current workspace + validity
 ccws open my-work                      # launch claude in my-work
+ccws resume my-work                    # relaunch claude, pick a past session
+ccws resume my-work <session-id>       # continue that exact session
 ccws remove ~/projects/web -w my-work
 ccws bypass on -w my-work              # defaultMode: "bypassPermissions" (skip permission prompts)
 ccws bypass off -w my-work             # remove defaultMode, back to default mode
@@ -49,6 +51,12 @@ ccws delete my-work --force            # delete without confirmation
 
 Convention root `$ROOT` defaults to `~/.ccws/`; override with `--root <path>`
 or `CCWS_ROOT` env var.
+
+`open` and `resume` stay attached until claude exits and propagate its exit
+code. On a clean exit ccws erases claude's own `Resume this session with:`
+hint and prints a copy-pastable equivalent with the session id recovered from
+`~/.claude/projects/`: `resume this session: ccws resume <name> <session-id>`
+(id-less when no session matches the run).
 
 > **Security note**: `bypassPermissions` skips Claude Code's permission
 > confirmation prompts — only enable it for workspaces you fully trust. As a

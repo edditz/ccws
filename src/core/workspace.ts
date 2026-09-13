@@ -32,6 +32,13 @@ export function validateWorkspaceName(name: string): void {
       `invalid workspace name "${name}": must not be a parent-dir segment (.) or (..)`,
     );
   }
+  if (trimmed === ".ccws") {
+    // $ROOT/.ccws holds ccws internal state (project mode sidecars); an entry
+    // with this name would let mode writes follow a symlink into a user dir.
+    throw new Error(
+      `invalid workspace name "${name}": ".ccws" is reserved for ccws internal state`,
+    );
+  }
 }
 
 export function workspaceExists(root: string, name: string): boolean {

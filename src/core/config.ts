@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
 import { readdirSync, statSync, lstatSync, readlinkSync, realpathSync, existsSync } from "node:fs";
-import { readSettings, BYPASS_MODE } from "./settings.js";
+import { readSettings } from "./settings.js";
 import { assertAllExist, isSymlink } from "./paths.js";
 import type { Workspace, Project, Entry } from "../types.js";
 
@@ -23,6 +23,15 @@ export function claudeMdPath(root: string, name: string): string {
   return join(workspacePath(root, name), "CLAUDE.md");
 }
 
+/** Directory holding per-entry permission-mode sidecars for projects. */
+export function modesStoreDir(root: string): string {
+  return join(root, ".ccws", "modes");
+}
+
+export function modeSidecarPath(root: string, name: string): string {
+  return join(modesStoreDir(root), name);
+}
+
 export function detectWorkspaceFromCwd(root: string, cwd: string = process.cwd()): string | null {
   const rel = relative(root, cwd);
   if (rel.startsWith("..") || rel === "") return null;
@@ -41,14 +50,14 @@ export function discoverWorkspaces(root: string): Workspace[] {
   });
   return names.map((name) => {
     let dirs: string[] = [];
-    let bypass = false;
+    let mode: string | undefined;
     try {
       const s = readSettings(settingsPath(root, name));
       dirs = s.permissions?.additionalDirectories ?? [];
-      bypass = s.permissions?.defaultMode === BYPASS_MODE;
+      mode = s.permissions?.defaultMode;
     } catch { dirs = []; }
     const missing = assertAllExist(dirs).length;
-    return { name, path: workspacePath(root, name), dirs, missing, bypass };
+    return { name, path: workspacePath(root, name), dirs, missing, mode };
   }).sort((a, b) => a.name.localeCompare(b.name));
 }
 

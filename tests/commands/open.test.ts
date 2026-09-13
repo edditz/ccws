@@ -1,12 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync, symlinkSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EventEmitter } from "node:events";
 import type { ChildProcess } from "node:child_process";
 import { initAction } from "../../src/commands/init.js";
 import { openAction, type Runner } from "../../src/commands/open.js";
-import { workspacePath } from "../../src/core/config.js";
+import { workspacePath, settingsPath } from "../../src/core/config.js";
+import { setStoredMode } from "../../src/core/mode.js";
+
+interface SpawnCall { cmd: string; args: string[]; cwd: string }
 
 let root: string;
 beforeEach(() => { root = mkdtempSync(join(tmpdir(), "ccws-root-")); });
@@ -78,5 +81,65 @@ describe("openAction", () => {
     await openAction("demo", { root, runner: () => exitedChild(2) });
     expect(process.exitCode).toBe(2);
     expect(chunks.join("")).not.toContain("resume this session");
+  });
+
+  it("passes no --permission-mode when the workspace has no stored mode", async () => {
+    await initAction("demo", { root });
+    const calls: SpawnCall[] = [];
+    const runner: Runner = (cmd, args, opts) => {
+      calls.push({ cmd, args, cwd: opts.cwd });
+      return exitedChild(0);
+    };
+    await openAction("demo", { root, runner });
+    expect(calls).toEqual([{ cmd: "claude", args: [], cwd: workspacePath(root, "demo") }]);
+  });
+
+  it("prepends --permission-mode from the workspace's defaultMode", async () => {
+    await initAction("demo", { root });
+    writeFileSync(settingsPath(root, "demo"),
+      JSON.stringify({ permissions: { additionalDirectories: [], defaultMode: "acceptEdits" } }));
+    const calls: SpawnCall[] = [];
+    const runner: Runner = (cmd, args, opts) => {
+      calls.push({ cmd, args, cwd: opts.cwd });
+      return exitedChild(0);
+    };
+    await openAction("demo", { root, runner });
+    expect(calls).toEqual([
+      { cmd: "claude", args: ["--permission-mode", "acceptEdits"], cwd: workspacePath(root, "demo") },
+    ]);
+  });
+
+  it("prepends --permission-mode from a project's sidecar and launches in the target", async () => {
+    const realRoot = realpathSync(root);
+    const target = realpathSync(mkdtempSync(join(tmpdir(), "proj-")));
+    symlinkSync(target, join(realRoot, "myproj"));
+    setStoredMode(realRoot, { kind: "project", name: "myproj", target }, "auto");
+    const calls: SpawnCall[] = [];
+    const runner: Runner = (cmd, args, opts) => {
+      calls.push({ cmd, args, cwd: opts.cwd });
+      return exitedChild(0);
+    };
+    await openAction("myproj", { root, runner });
+    expect(calls).toEqual([
+      { cmd: "claude", args: ["--permission-mode", "auto"], cwd: target },
+    ]);
+  });
+
+  it("warns and launches without the flag when settings are corrupt", async () => {
+    await initAction("demo", { root });
+    writeFileSync(settingsPath(root, "demo"), "{ not json");
+    const calls: SpawnCall[] = [];
+    const errChunks: string[] = [];
+    vi.spyOn(process.stderr, "write").mockImplementation(((chunk: unknown) => {
+      errChunks.push(String(chunk));
+      return true;
+    }) as never);
+    const runner: Runner = (cmd, args, opts) => {
+      calls.push({ cmd, args, cwd: opts.cwd });
+      return exitedChild(0);
+    };
+    await openAction("demo", { root, runner });
+    expect(calls).toEqual([{ cmd: "claude", args: [], cwd: workspacePath(root, "demo") }]);
+    expect(errChunks.join("")).toMatch(/could not read the permission mode/);
   });
 });

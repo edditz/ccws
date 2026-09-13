@@ -8,18 +8,20 @@ import {
 } from "../core/config.js";
 import type { Entry } from "../types.js";
 import { readSettings } from "../core/settings.js";
+import { resolveStoredMode } from "../core/mode.js";
 import { existsSync } from "node:fs";
 import { info, warn } from "../utils/log.js";
 
 export interface StatusOptions { root?: string; cwd?: string }
 
-const printProject = (entry: Extract<Entry, { kind: "project" | "dangling" }>): void => {
+const printProject = (root: string, entry: Extract<Entry, { kind: "project" | "dangling" }>): void => {
   if (entry.kind === "dangling") {
     warn(`project: ${entry.name}  (target missing: ${entry.target})`);
     warn(`run \`ccws delete ${entry.name}\` to clean up the registration`);
     return;
   }
   info(`project: ${entry.name}  (${entry.target})`);
+  info(`mode: ${resolveStoredMode(root, entry) ?? "default"}`);
   info(`open it with: ccws open ${entry.name}`);
 };
 
@@ -31,7 +33,7 @@ export async function statusAction(opts: StatusOptions): Promise<void> {
     // project's target directory, anywhere on disk.
     const proj = detectProjectFromCwd(root, opts.cwd);
     if (proj) {
-      printProject({ kind: "project", name: proj.name, target: proj.target });
+      printProject(root, { kind: "project", name: proj.name, target: proj.target });
       return;
     }
     warn("not inside any workspace — cd into a workspace or use `ccws list`");
@@ -39,7 +41,7 @@ export async function statusAction(opts: StatusOptions): Promise<void> {
   }
   const entry = resolveEntry(root, name);
   if (entry.kind === "project" || entry.kind === "dangling") {
-    printProject(entry);
+    printProject(root, entry);
     return;
   }
   if (entry.kind === "missing") {
@@ -51,8 +53,13 @@ export async function statusAction(opts: StatusOptions): Promise<void> {
     warn("not inside any workspace — cd into a workspace or use `ccws list`");
     return;
   }
-  const dirs = readSettings(settingsPath(root, name)).permissions?.additionalDirectories ?? [];
+  const settings = readSettings(settingsPath(root, name));
+  const dirs = settings.permissions?.additionalDirectories ?? [];
+  // Reuse the already-parsed settings for the mode line (same string-only
+  // filter as resolveStoredMode) instead of re-reading the file.
+  const rawMode = settings.permissions?.defaultMode;
   info(`workspace: ${name}  (${workspacePath(root, name)})`);
+  info(`mode: ${typeof rawMode === "string" ? rawMode : "default"}`);
   for (const d of dirs) {
     process.stdout.write(existsSync(d) ? `  ✓  ${d}\n` : `  ✗  ${d}  (missing)\n`);
   }

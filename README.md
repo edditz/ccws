@@ -32,21 +32,26 @@ bun run build:all      # all 5 targets → dist/
 
 ```bash
 ccws init my-work                      # create workspace under ~/.ccws/
+ccws init ~/projects/web               # or register an existing dir as a read-only project
 ccws add ~/projects/web ~/projects/api -w my-work
-ccws list                              # list all workspaces (concise)
-ccws list -l                           # also show each workspace's path + bypass status
+ccws list                              # list all workspaces + projects (concise)
+ccws list -l                           # also show each workspace's path + permission mode
 ccws list my-work                      # show my-work's directories
-ccws list my-work -l                   # also show my-work's bypass status
-ccws status                            # current workspace + validity
+ccws list my-work -l                   # also show my-work's permission mode
+ccws status                            # current workspace/project + validity
 ccws open my-work                      # launch claude in my-work
 ccws resume my-work                    # relaunch claude, pick a past session
 ccws resume my-work <session-id>       # continue that exact session
 ccws remove ~/projects/web -w my-work
-ccws bypass on -w my-work              # defaultMode: "bypassPermissions" (skip permission prompts)
-ccws bypass off -w my-work             # remove defaultMode, back to default mode
-ccws bypass                            # show the current mode (from inside the workspace)
+ccws mode auto                         # set the permission mode for the cwd entry
+ccws mode my-work plan                 # or target it by name (workspaces AND projects)
+ccws mode                              # show the current mode (from inside the entry)
+ccws mode my-work off                  # clear the stored mode (back to claude's default)
+ccws bypass on -w my-work              # shortcut: mode my-work bypassPermissions
+ccws bypass off -w my-work             # shortcut: clear the mode
 ccws delete my-work                    # delete the workspace (asks for confirmation)
 ccws delete my-work --force            # delete without confirmation
+ccws delete my-proj                    # unregister a project (removes only the symlink)
 ```
 
 Convention root `$ROOT` defaults to `~/.ccws/`; override with `--root <path>`
@@ -58,10 +63,16 @@ hint and prints a copy-pastable equivalent with the session id recovered from
 `~/.claude/projects/`: `resume this session: ccws resume <name> <session-id>`
 (id-less when no session matches the run).
 
-> **Security note**: `bypassPermissions` skips Claude Code's permission
-> confirmation prompts — only enable it for workspaces you fully trust. As a
-> safety guard, Claude Code still asks for confirmation when entering bypass
-> mode from a project-level `settings.json`.
+> **Security note**: `ccws mode` sets Claude Code's permission mode per entry.
+> Claude Code ≥ 2.1.257 ignores `bypassPermissions`/`auto` set in a
+> project-level `settings.json`, so ccws passes the stored mode to claude as
+> `--permission-mode <mode>` at launch (highest precedence, works everywhere).
+> Workspaces keep the mode in their own `.claude/settings.json`
+> (`permissions.defaultMode`); projects store it in a sidecar under
+> `$ROOT/.ccws/modes/<name>` — ccws never writes into a project's target
+> directory. `bypassPermissions` skips permission confirmation prompts — only
+> enable it for entries you fully trust; Claude Code still asks for
+> confirmation the first time a session enters bypass mode.
 
 ## Development
 

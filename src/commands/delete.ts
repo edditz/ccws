@@ -1,6 +1,7 @@
 import { rmSync, unlinkSync } from "node:fs";
 import { sep } from "node:path";
 import { resolveRoot, resolveEntry, workspacePath } from "../core/config.js";
+import { removeModeSidecar } from "../core/mode.js";
 import { validateWorkspaceName } from "../core/workspace.js";
 import { success, info, warn } from "../utils/log.js";
 
@@ -29,7 +30,11 @@ export async function deleteAction(name: string, opts: DeleteOptions): Promise<v
   }
   if (entry.kind === "project" || entry.kind === "dangling") {
     // Only the symlink is removed: the project directory is the user's own
-    // and is physically unreachable from unlinkSync on the link.
+    // and is physically unreachable from unlinkSync on the link. The mode
+    // sidecar under $ROOT is ccws's own, so it goes with the registration —
+    // removed first so any failure (locked $ROOT, .ccws as a plain file)
+    // leaves the registration intact and the whole delete retryable.
+    removeModeSidecar(root, name);
     unlinkSync(workspacePath(root, name));
     const verb = entry.kind === "project" ? "unregistered project" : "removed dangling entry";
     success(`${verb} "${name}" — target at ${entry.target} left untouched`);

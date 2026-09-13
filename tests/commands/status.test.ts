@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { mkdtempSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initAction } from "../../src/commands/init.js";
 import { statusAction } from "../../src/commands/status.js";
 import { settingsPath } from "../../src/core/config.js";
+import { setStoredMode } from "../../src/core/mode.js";
 
 let root: string; let real: string;
 beforeEach(() => {
@@ -58,5 +59,24 @@ describe("statusAction", () => {
     // Either stream may carry the warning; union both and assert the intent.
     expect(`${errText}${outText}`).toMatch(/not inside|no workspace/i);
     expect(`${errText}${outText}`).not.toMatch(/settings\.json not found|run ccws init/i);
+  });
+
+  it("shows the workspace's stored permission mode", async () => {
+    await initAction("demo", { root });
+    writeFileSync(settingsPath(root, "demo"),
+      JSON.stringify({ permissions: { additionalDirectories: [], defaultMode: "plan" } }));
+    const out = capture();
+    await statusAction({ root, cwd: join(root, "demo") });
+    expect(out()).toContain("mode: plan");
+  });
+
+  it("shows the project's stored permission mode when cwd is inside its target", async () => {
+    const target = realpathSync(mkdtempSync(join(tmpdir(), "ccws-proj-")));
+    symlinkSync(target, join(root, "myproj"));
+    setStoredMode(root, { kind: "project", name: "myproj", target }, "auto");
+    const out = capture();
+    await statusAction({ root, cwd: target });
+    expect(out()).toContain("project: myproj");
+    expect(out()).toContain("mode: auto");
   });
 });

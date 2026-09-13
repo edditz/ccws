@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, mkdirSync, writeFileSync, mkdir } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, mkdir, symlinkSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  resolveRoot, workspacePath, settingsPath, claudeMdPath,
-  detectWorkspaceFromCwd, discoverWorkspaces,
+  resolveRoot, workspacePath, settingsPath, claudeMdPath, modesStoreDir, modeSidecarPath,
+  detectWorkspaceFromCwd, discoverWorkspaces, discoverProjects,
 } from "../../src/core/config.js";
 
 let root: string;
@@ -36,6 +36,10 @@ describe("paths", () => {
   it("claudeMdPath", () => {
     expect(claudeMdPath(root, "demo")).toBe(join(root, "demo", "CLAUDE.md"));
   });
+  it("modesStoreDir and modeSidecarPath", () => {
+    expect(modesStoreDir(root)).toBe(join(root, ".ccws", "modes"));
+    expect(modeSidecarPath(root, "demo")).toBe(join(root, ".ccws", "modes", "demo"));
+  });
 });
 
 describe("detectWorkspaceFromCwd", () => {
@@ -63,10 +67,10 @@ describe("discoverWorkspaces", () => {
     expect(ws.map((w) => w.name)).toEqual(["demo"]);
     expect(ws[0].dirs).toEqual([real, "/nope"]);
     expect(ws[0].missing).toBe(1);
-    expect(ws[0].bypass).toBe(false);
+    expect(ws[0].mode).toBeUndefined();
     expect(ws[0].path).toBe(workspacePath(root, "demo"));
   });
-  it("reports bypass status from permissions.defaultMode", () => {
+  it("reports mode from permissions.defaultMode", () => {
     mkdirSync(join(root, "open", ".claude"), { recursive: true });
     writeFileSync(join(root, "open", ".claude", "settings.json"),
       JSON.stringify({ permissions: { additionalDirectories: [], defaultMode: "bypassPermissions" } }));
@@ -75,7 +79,16 @@ describe("discoverWorkspaces", () => {
       JSON.stringify({ permissions: { additionalDirectories: [] } }));
 
     const ws = discoverWorkspaces(root);
-    const byName = Object.fromEntries(ws.map((w) => [w.name, w.bypass]));
-    expect(byName).toEqual({ open: true, locked: false });
+    const byName = Object.fromEntries(ws.map((w) => [w.name, w.mode]));
+    expect(byName).toEqual({ open: "bypassPermissions", locked: undefined });
+  });
+  it("ignores the .ccws sidecar store in workspace and project discovery", () => {
+    mkdirSync(modesStoreDir(root), { recursive: true });
+    writeFileSync(modeSidecarPath(root, "demo"), "plan\n");
+    const target = realpathSync(mkdtempSync(join(tmpdir(), "proj-")));
+    symlinkSync(target, join(root, "proj"));
+
+    expect(discoverWorkspaces(root).map((w) => w.name)).toEqual([]);
+    expect(discoverProjects(root).map((p) => p.name)).toEqual(["proj"]);
   });
 });

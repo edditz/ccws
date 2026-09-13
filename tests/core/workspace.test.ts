@@ -53,6 +53,14 @@ describe("validateWorkspaceName", () => {
     expect(() => validateWorkspaceName("a/..")).toThrow(/invalid workspace name/i);
     expect(() => validateWorkspaceName("./x")).toThrow(/invalid workspace name/i);
   });
+
+  it("rejects the reserved .ccws name (ccws internal state dir)", () => {
+    expect(() => validateWorkspaceName(".ccws")).toThrow(/reserved for ccws internal state/);
+  });
+
+  it("still allows ordinary dot-prefixed names", () => {
+    expect(() => validateWorkspaceName(".hidden")).not.toThrow();
+  });
 });
 
 describe("createWorkspace", () => {

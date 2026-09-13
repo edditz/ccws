@@ -47,24 +47,21 @@ export function setAdditionalDirs(settingsPath: string, dirs: string[]): void {
 export const BYPASS_MODE = "bypassPermissions";
 
 /**
- * Enable or disable the workspace's bypassPermissions mode.
- *
- * "bypassPermissions" is a value of `permissions.defaultMode` (a permission
- * MODE, not a rule array): enabling writes `defaultMode: "bypassPermissions"`,
- * disabling removes the key so Claude falls back to its default mode.
+ * Set the workspace's permission mode (`permissions.defaultMode`), or remove
+ * the key entirely with `undefined` so Claude falls back to its default mode.
  * Routes through `readSettings` so a corrupt settings.json is rejected rather
  * than overwritten; preserves unknown fields and key order (immutable copy).
  */
-export function setBypassPermissions(settingsPath: string, enabled: boolean): void {
+export function setDefaultMode(settingsPath: string, mode: string | undefined): void {
   let settings: SettingsJson = {};
   if (existsSync(settingsPath)) {
     settings = readSettings(settingsPath);
   }
   const permissions = { ...(settings.permissions ?? {}) };
-  if (enabled) {
-    permissions.defaultMode = BYPASS_MODE;
-  } else {
+  if (mode === undefined) {
     delete permissions.defaultMode;
+  } else {
+    permissions.defaultMode = mode;
   }
   const next: SettingsJson = { ...settings, permissions };
   writeFileSync(settingsPath, JSON.stringify(next, null, 2) + "\n", "utf8");

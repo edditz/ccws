@@ -56,6 +56,12 @@ describe("init: project registration", () => {
     expect(out()).toContain("ccws open myproj");
   });
 
+  it("refuses to register a directory named .ccws (reserved for internal state)", async () => {
+    const target = makeProjectDir(".ccws");
+    await expect(initAction(target, { root })).rejects.toThrow(/reserved for ccws internal state/);
+    expect(existsSync(join(root, ".ccws"))).toBe(false);
+  });
+
   it("registration creates no settings.json and no CLAUDE.md in $ROOT or the target", async () => {
     const target = makeProjectDir("clean");
     await initAction(target, { root });

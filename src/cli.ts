@@ -10,6 +10,7 @@ import { resumeAction } from "./commands/resume.js";
 import { updateAction } from "./commands/update.js";
 import { regenAction } from "./commands/regen.js";
 import { bypassAction } from "./commands/bypass.js";
+import { modeAction } from "./commands/mode.js";
 import { deleteAction } from "./commands/delete.js";
 import { error } from "./utils/log.js";
 import pkg from "../package.json" with { type: "json" };
@@ -77,7 +78,7 @@ export function buildCli(): Command {
     .alias("ls")
     .description("list workspaces and registered projects, or show one entry's detail")
     .addOption(rootOption())
-    .option("-l, --long", "show each workspace's path and bypass status")
+    .option("-l, --long", "show each workspace's path and permission mode")
     .action(async (name: string | undefined, opts) => {
       try {
         await listAction(name ? [name] : [], opts);
@@ -152,7 +153,7 @@ export function buildCli(): Command {
 
   program
     .command("bypass [state]")
-    .description("enable or disable the bypassPermissions mode for a workspace")
+    .description("enable or disable the bypassPermissions mode for a workspace (shortcut for ccws mode bypassPermissions)")
     .addOption(rootOption())
     .option("-w, --workspace <name>", "target workspace")
     .action(async (state: string | undefined, opts) => {
@@ -161,6 +162,18 @@ export function buildCli(): Command {
           throw new Error(`invalid state "${state}" — expected "on" or "off"`);
         }
         await bypassAction(state, opts);
+      } catch (e) {
+        fail(e);
+      }
+    });
+
+  program
+    .command("mode [name] [value]")
+    .description("get or set the permission mode for a workspace or project (acceptEdits, auto, bypassPermissions, manual, dontAsk, plan; off clears)")
+    .addOption(rootOption())
+    .action(async (name: string | undefined, value: string | undefined, opts) => {
+      try {
+        await modeAction(name, value, opts);
       } catch (e) {
         fail(e);
       }

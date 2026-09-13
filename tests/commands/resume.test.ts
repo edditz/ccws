@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EventEmitter } from "node:events";
 import type { ChildProcess } from "node:child_process";
 import { initAction } from "../../src/commands/init.js";
 import { resumeAction, type ResumeOptions } from "../../src/commands/resume.js";
-import { workspacePath } from "../../src/core/config.js";
+import { workspacePath, settingsPath } from "../../src/core/config.js";
 import type { Runner } from "../../src/utils/claude-session.js";
 
 let root: string;
@@ -96,6 +96,17 @@ describe("resumeAction", () => {
     await resumeAction("demo", undefined, { root, runner: recordingRunner([], 2) });
     expect(process.exitCode).toBe(2);
     expect(chunks.join("")).not.toContain("resume this session");
+  });
+
+  it("prepends --permission-mode before --resume when a mode is stored", async () => {
+    await initAction("demo", { root });
+    writeFileSync(settingsPath(root, "demo"),
+      JSON.stringify({ permissions: { additionalDirectories: [], defaultMode: "plan" } }));
+    const calls: SpawnCall[] = [];
+    await resumeAction("demo", "abc-123", { root, runner: recordingRunner(calls) });
+    expect(calls).toEqual([
+      { cmd: "claude", args: ["--permission-mode", "plan", "--resume", "abc-123"], cwd: workspacePath(root, "demo") },
+    ]);
   });
 });
 

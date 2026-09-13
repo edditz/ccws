@@ -4,6 +4,37 @@ All notable changes to ccws are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- `mode` subcommand: get or set the Claude Code permission mode per workspace
+  **and** per project — `ccws mode [name] [value]`. Values:
+  `acceptEdits`, `auto`, `bypassPermissions`, `manual`, `dontAsk`, `plan`;
+  `off`/`default` clears. A single argument that is a mode keyword targets the
+  cwd-resolved entry (like `bypass on`); otherwise it is an entry name and the
+  command is a getter.
+  - Project modes are stored in a sidecar under `$ROOT/.ccws/modes/<name>` —
+    the only place ccws owns for projects, so the read-only guarantee holds;
+    `delete` cleans the sidecar when unregistering. `.ccws` is now a reserved
+    entry name.
+  - `status` and `ls -l` show the stored mode for both kinds (`mode: <value>`,
+    `mode: default` when unset; project rows only when a mode is stored).
+
+### Changed
+- `open`/`resume` pass the stored mode to claude as
+  `--permission-mode <mode>` (prepended before `--resume`). Claude Code
+  ≥ 2.1.257 silently ignores `bypassPermissions`/`auto` in project-level
+  `.claude/settings.json`, so the flag is now the reliable channel; workspace
+  settings keep working as before (dual-channel). If the mode cannot be read
+  (corrupt settings.json), the launch degrades to running without the flag
+  with a warning instead of failing.
+- `ls -l` workspace display changed from `bypass: ON/off` to
+  `mode: <value|default>`.
+
+### Compatibility
+- `bypass on/off/getter` keeps working unchanged, now as a shortcut for
+  `ccws mode <name> bypassPermissions` / clearing.
+
 ## [1.3.0] - 2026-09-13
 
 ### Added

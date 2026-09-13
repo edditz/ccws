@@ -1,5 +1,5 @@
 import { resolveRoot, detectWorkspaceFromCwd, settingsPath } from "../core/config.js";
-import { readSettings, setBypassPermissions, BYPASS_MODE } from "../core/settings.js";
+import { readSettings, setDefaultMode, BYPASS_MODE } from "../core/settings.js";
 import { requireWorkspace, validateWorkspaceName } from "../core/workspace.js";
 import { success, info } from "../utils/log.js";
 
@@ -38,12 +38,12 @@ export async function bypassAction(
   const path = settingsPath(root, name);
 
   if (state === "on") {
-    setBypassPermissions(path, true);
+    setDefaultMode(path, BYPASS_MODE);
     success(`bypass permissions enabled for "${name}"`);
     return;
   }
   if (state === "off") {
-    setBypassPermissions(path, false);
+    setDefaultMode(path, undefined);
     success(`bypass permissions disabled for "${name}"`);
     return;
   }

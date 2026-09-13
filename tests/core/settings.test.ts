@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { mkdtempSync, writeFileSync, readFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readSettings, writeAdditionalDirs, setAdditionalDirs, setBypassPermissions } from "../../src/core/settings.js";
+import { readSettings, writeAdditionalDirs, setAdditionalDirs, setDefaultMode } from "../../src/core/settings.js";
 
 let dir: string;
 let settingsFile: string;
@@ -99,18 +99,24 @@ describe("setAdditionalDirs", () => {
   });
 });
 
-describe("setBypassPermissions", () => {
-  it("enables bypass by writing defaultMode, preserving other fields", () => {
+describe("setDefaultMode", () => {
+  it("writes defaultMode, preserving other fields", () => {
     writeFileSync(settingsFile, JSON.stringify({ model: "opus", permissions: { additionalDirectories: ["/a"] } }));
-    setBypassPermissions(settingsFile, true);
+    setDefaultMode(settingsFile, "plan");
     const raw = JSON.parse(readFileSync(settingsFile, "utf8"));
-    expect(raw.permissions.defaultMode).toBe("bypassPermissions");
+    expect(raw.permissions.defaultMode).toBe("plan");
     expect(raw.permissions.additionalDirectories).toEqual(["/a"]);
     expect(raw.model).toBe("opus");
   });
-  it("disables bypass by removing defaultMode, preserving other fields", () => {
+  it("overwrites an existing defaultMode", () => {
+    writeFileSync(settingsFile, JSON.stringify({ permissions: { defaultMode: "plan" } }));
+    setDefaultMode(settingsFile, "auto");
+    const raw = JSON.parse(readFileSync(settingsFile, "utf8"));
+    expect(raw.permissions.defaultMode).toBe("auto");
+  });
+  it("removes defaultMode on undefined, preserving other fields", () => {
     writeFileSync(settingsFile, JSON.stringify({ model: "opus", permissions: { defaultMode: "bypassPermissions", keep: 1 } }));
-    setBypassPermissions(settingsFile, false);
+    setDefaultMode(settingsFile, undefined);
     const raw = JSON.parse(readFileSync(settingsFile, "utf8"));
     expect(raw.permissions.defaultMode).toBeUndefined();
     expect(raw.permissions.keep).toBe(1);
@@ -118,20 +124,20 @@ describe("setBypassPermissions", () => {
   });
   it("adds permissions when settings lacks them", () => {
     writeFileSync(settingsFile, JSON.stringify({ model: "opus" }));
-    setBypassPermissions(settingsFile, true);
+    setDefaultMode(settingsFile, "bypassPermissions");
     const raw = JSON.parse(readFileSync(settingsFile, "utf8"));
     expect(raw.permissions.defaultMode).toBe("bypassPermissions");
     expect(raw.model).toBe("opus");
   });
   it("creates the file when it does not exist", () => {
     const missing = join(dir, ".claude", "fresh.json");
-    setBypassPermissions(missing, true);
+    setDefaultMode(missing, "acceptEdits");
     const raw = JSON.parse(readFileSync(missing, "utf8"));
-    expect(raw.permissions.defaultMode).toBe("bypassPermissions");
+    expect(raw.permissions.defaultMode).toBe("acceptEdits");
   });
   it("throws on corrupt JSON without overwriting (aligns with readSettings)", () => {
     writeFileSync(settingsFile, "{ not json");
-    expect(() => setBypassPermissions(settingsFile, true)).toThrow(/corrupt|parse/i);
+    expect(() => setDefaultMode(settingsFile, "plan")).toThrow(/corrupt|parse/i);
     expect(readFileSync(settingsFile, "utf8")).toBe("{ not json");
   });
 });

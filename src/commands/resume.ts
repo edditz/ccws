@@ -1,5 +1,5 @@
 import { resolveRoot } from "../core/config.js";
-import { launchCwd } from "./open.js";
+import { launchModeArgs, resolveLaunchTarget } from "./open.js";
 import { runClaudeSession, resumeHint, type Runner } from "../utils/claude-session.js";
 
 export interface ResumeOptions { root?: string; runner?: Runner; sessionsRoot?: string }
@@ -10,13 +10,14 @@ export async function resumeAction(
   opts: ResumeOptions,
 ): Promise<void> {
   const root = resolveRoot(opts.root);
-  const cwd = launchCwd(root, name); // workspaces and projects share this
+  const { entry, cwd } = resolveLaunchTarget(root, name); // workspaces and projects share this
   // Pass-through, mirroring claude's own semantics: an id resumes that exact
   // session, no id opens claude's interactive session picker. claude resolves
   // ids/names and prints its own errors, so nothing is validated here.
   // Normalize "" to undefined so both branches below agree it means "picker".
   const explicitId = sessionId || undefined;
-  const args = explicitId ? ["--resume", explicitId] : ["--resume"];
+  const resumeArgs = explicitId ? ["--resume", explicitId] : ["--resume"];
+  const args = [...launchModeArgs(root, name, entry), ...resumeArgs];
   await runClaudeSession({
     cwd,
     args,

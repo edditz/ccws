@@ -18,7 +18,7 @@ describe("cli", () => {
   it("builds with version and all subcommands", () => {
     const program = buildCli();
     const names = program.commands.map((c) => c.name());
-    for (const n of ["init", "add", "remove", "list", "status", "open", "resume", "update", "regen", "bypass", "delete"]) {
+    for (const n of ["init", "add", "remove", "list", "status", "open", "resume", "update", "regen", "bypass", "mode", "delete"]) {
       expect(names).toContain(n);
     }
   });
@@ -32,7 +32,7 @@ describe("cli", () => {
 
   it("registers -r/--root on every workspace subcommand (update intentionally excluded)", () => {
     const program = buildCli();
-    for (const n of ["init", "add", "remove", "list", "status", "open", "resume", "regen", "bypass", "delete"]) {
+    for (const n of ["init", "add", "remove", "list", "status", "open", "resume", "regen", "bypass", "mode", "delete"]) {
       const cmd = program.commands.find((c) => c.name() === n);
       expect(cmd).toBeDefined();
       expect(cmd!.options.map((o) => o.long)).toContain("--root");
@@ -68,6 +68,8 @@ describe("cli", () => {
     const flags = list!.options.map((o) => o.long);
     expect(flags).toContain("--long");
     expect(list!.options.map((o) => o.short)).toContain("-l");
+    // Pin the help wording so it does not drift from what -l actually prints.
+    expect(list!.options.find((o) => o.long === "--long")!.description).toContain("permission mode");
   });
 
   it("registers resume with <name> required and [session-id] optional", () => {
@@ -78,6 +80,14 @@ describe("cli", () => {
     const args = resume!.registeredArguments.map((a) => [a.name(), a.required]);
     expect(args).toContainEqual(["name", true]);
     expect(args).toContainEqual(["session-id", false]);
+  });
+
+  it("registers mode with [name] and [value] both optional", () => {
+    const program = buildCli();
+    const mode = program.commands.find((c) => c.name() === "mode");
+    expect(mode).toBeDefined();
+    const args = mode!.registeredArguments.map((a) => [a.name(), a.required]);
+    expect(args).toEqual([["name", false], ["value", false]]);
   });
 
   it("reports a version", () => {
@@ -97,6 +107,14 @@ describe("cli", () => {
     await program.parseAsync(["node", "ccws", "init", "demo", "-r", root]);
     await program.parseAsync(["node", "ccws", "add", dir, "-r", root, "-w", "demo"]);
     expect(readDirs("demo")).toEqual([resolve(dir)]);
+  });
+
+  it("wires `mode <name> <value>` through commander and forwards --root", async () => {
+    const program = buildCli();
+    await program.parseAsync(["node", "ccws", "init", "demo", "-r", root]);
+    await program.parseAsync(["node", "ccws", "mode", "demo", "plan", "-r", root]);
+    const raw = JSON.parse(readFileSync(settingsPath(root, "demo"), "utf8"));
+    expect(raw.permissions.defaultMode).toBe("plan");
   });
 
   it("accepts the `ls` alias and lists discovered workspaces without error", async () => {

@@ -12,7 +12,8 @@ export interface Workspace {
   path: string;
   dirs: string[];
   missing: number;
-  bypass: boolean;
+  /** Raw `permissions.defaultMode` when set (undefined = Claude's default). */
+  mode?: string;
 }
 
 /**
@@ -39,3 +40,6 @@ export type Entry =
   | { kind: "project"; name: string; target: string }
   | { kind: "dangling"; name: string; target: string }
   | { kind: "missing" };
+
+/** Any Entry that names something registered under $ROOT (not "missing"). */
+export type NamedEntry = Exclude<Entry, { kind: "missing" }>;

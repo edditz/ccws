@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { mkdtempSync, existsSync, realpathSync } from "node:fs";
+import { mkdtempSync, mkdirSync, existsSync, realpathSync, symlinkSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initAction } from "../../src/commands/init.js";
 import { deleteAction } from "../../src/commands/delete.js";
 import { workspaceExists } from "../../src/core/workspace.js";
-import { workspacePath } from "../../src/core/config.js";
+import { workspacePath, modeSidecarPath } from "../../src/core/config.js";
+import { setStoredMode } from "../../src/core/mode.js";
 
 let root: string;
 beforeEach(() => {
@@ -102,5 +103,40 @@ describe("deleteAction", () => {
       process.chdir(prevCwd);
     }
     expect(workspaceExists(root, "demo")).toBe(false);
+  });
+});
+
+describe("deleteAction: projects", () => {
+  const registerProject = (name: string): string => {
+    const target = realpathSync(mkdtempSync(join(tmpdir(), "ccws-proj-")));
+    symlinkSync(target, join(root, name));
+    return target;
+  };
+
+  it("unregisters a project, removing both the symlink and its mode sidecar, target untouched", async () => {
+    const target = registerProject("myproj");
+    setStoredMode(root, { kind: "project", name: "myproj", target }, "auto");
+    await deleteAction("myproj", { root });
+    expect(existsSync(join(root, "myproj"))).toBe(false);
+    expect(existsSync(modeSidecarPath(root, "myproj"))).toBe(false);
+    expect(existsSync(target)).toBe(true);
+  });
+
+  it("unregisters a project without a sidecar without error", async () => {
+    const target = registerProject("plain");
+    await deleteAction("plain", { root });
+    expect(existsSync(join(root, "plain"))).toBe(false);
+    expect(existsSync(target)).toBe(true);
+  });
+
+  it("cleans the sidecar of a dangling entry too", async () => {
+    const gone = join(root, "gone-target");
+    mkdirSync(gone);
+    symlinkSync(gone, join(root, "gone"));
+    rmSync(gone, { recursive: true });
+    setStoredMode(root, { kind: "dangling", name: "gone", target: gone }, "plan");
+    await deleteAction("gone", { root });
+    expect(existsSync(join(root, "gone"))).toBe(false);
+    expect(existsSync(modeSidecarPath(root, "gone"))).toBe(false);
   });
 });

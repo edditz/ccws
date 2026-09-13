@@ -1,5 +1,5 @@
 import { resolveRoot, detectWorkspaceFromCwd, claudeMdPath } from "../core/config.js";
-import { workspaceExists, validateWorkspaceName } from "../core/workspace.js";
+import { requireWorkspace, validateWorkspaceName } from "../core/workspace.js";
 import {
   forceRewriteClaudeMd,
   readDirEntries,
@@ -24,9 +24,7 @@ export async function regenAction(
     );
   }
   validateWorkspaceName(ws);
-  if (!workspaceExists(root, ws)) {
-    throw new Error(`workspace "${ws}" does not exist — run \`ccws init ${ws}\` first`);
-  }
+  requireWorkspace(root, ws);
 
   if (opts.force) {
     forceRewriteClaudeMd(claudeMdPath(root, ws), readDirEntries(root, ws));

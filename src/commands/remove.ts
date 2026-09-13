@@ -1,7 +1,7 @@
 import { resolveRoot, detectWorkspaceFromCwd, settingsPath } from "../core/config.js";
 import { readSettings, setAdditionalDirs } from "../core/settings.js";
 import { toAbsolute } from "../core/paths.js";
-import { workspaceExists, validateWorkspaceName } from "../core/workspace.js";
+import { requireWorkspace, validateWorkspaceName } from "../core/workspace.js";
 import { syncClaudeMd } from "../core/claude-md.js";
 import { success } from "../utils/log.js";
 
@@ -24,9 +24,7 @@ export async function removeAction(dirs: string[], opts: RemoveOptions): Promise
   const name = resolveWorkspaceName(opts, root);
   validateWorkspaceName(name);
 
-  if (!workspaceExists(root, name)) {
-    throw new Error(`workspace "${name}" does not exist — run \`ccws init ${name}\` first`);
-  }
+  requireWorkspace(root, name);
 
   const current = readSettings(settingsPath(root, name)).permissions?.additionalDirectories ?? [];
   const toRemove = new Set(dirs.map(toAbsolute));

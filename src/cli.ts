@@ -34,7 +34,7 @@ export function buildCli(): Command {
 
   program
     .command("init <name>")
-    .description("create a new workspace")
+    .description("create a new workspace, or register an existing project directory (pass its path)")
     .addOption(rootOption())
     .option("-f, --force", "overwrite existing workspace")
     .option("-i, --interactive", "pick directories interactively")
@@ -75,7 +75,7 @@ export function buildCli(): Command {
   program
     .command("list [name]")
     .alias("ls")
-    .description("list workspaces or show one workspace's directories")
+    .description("list workspaces and registered projects, or show one entry's detail")
     .addOption(rootOption())
     .option("-l, --long", "show each workspace's path and bypass status")
     .action(async (name: string | undefined, opts) => {
@@ -88,7 +88,7 @@ export function buildCli(): Command {
 
   program
     .command("status")
-    .description("show the workspace for the current directory")
+    .description("show the workspace or project for the current directory")
     .addOption(rootOption())
     .action(async (opts) => {
       try {
@@ -100,7 +100,7 @@ export function buildCli(): Command {
 
   program
     .command("open <name>")
-    .description("launch claude in a workspace")
+    .description("launch claude in a workspace or registered project")
     .addOption(rootOption())
     .action(async (name: string, opts) => {
       try {
@@ -112,7 +112,7 @@ export function buildCli(): Command {
 
   program
     .command("resume <name> [session-id]")
-    .description("resume a claude session in a workspace (session picker without session-id)")
+    .description("resume a claude session in a workspace or project (session picker without session-id)")
     .addOption(rootOption())
     .action(async (name: string, sessionId: string | undefined, opts) => {
       try {
@@ -169,7 +169,7 @@ export function buildCli(): Command {
   program
     .command("delete <name>")
     .alias("rm")
-    .description("delete a workspace directory recursively")
+    .description("delete a workspace directory recursively, or unregister a project (removes only the symlink)")
     .addOption(rootOption())
     .option("-f, --force", "delete without confirmation")
     .action(async (name: string, opts) => {

@@ -1,7 +1,7 @@
 import { resolveRoot, detectWorkspaceFromCwd, settingsPath } from "../core/config.js";
 import { writeAdditionalDirs } from "../core/settings.js";
 import { toAbsolute, assertAllExist } from "../core/paths.js";
-import { workspaceExists, validateWorkspaceName } from "../core/workspace.js";
+import { requireWorkspace, validateWorkspaceName } from "../core/workspace.js";
 import { syncClaudeMd } from "../core/claude-md.js";
 import { success } from "../utils/log.js";
 
@@ -24,9 +24,7 @@ export async function addAction(dirs: string[], opts: AddOptions): Promise<void>
   const name = resolveWorkspaceName(opts, root);
   validateWorkspaceName(name);
 
-  if (!workspaceExists(root, name)) {
-    throw new Error(`workspace "${name}" does not exist — run \`ccws init ${name}\` first`);
-  }
+  requireWorkspace(root, name);
 
   const abs = dirs.map(toAbsolute);
   const missing = assertAllExist(abs);

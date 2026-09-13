@@ -1,6 +1,8 @@
-import { rmSync } from "node:fs";
+import { rmSync, existsSync, statSync } from "node:fs";
+import { resolve } from "node:path";
 import { resolveRoot, settingsPath, workspacePath } from "../core/config.js";
 import { createWorkspace, workspaceExists, validateWorkspaceName } from "../core/workspace.js";
+import { createProject } from "../core/project.js";
 import { assertAllExist, toAbsolute } from "../core/paths.js";
 import { writeAdditionalDirs } from "../core/settings.js";
 import { syncClaudeMd } from "../core/claude-md.js";
@@ -47,9 +49,22 @@ async function collectAndWriteDirs(
 }
 
 export async function initAction(name: string, opts: InitOptions): Promise<void> {
-  validateWorkspaceName(name);
-
   const root = resolveRoot(opts.root);
+
+  // An argument naming an existing directory registers that directory as a
+  // project (a $ROOT symlink to it); anything else creates a new workspace
+  // with that name. The two flows are mutually exclusive by this test.
+  // Empty/whitespace args must fall through: resolve("") is the cwd — an
+  // existing directory — and would silently register it instead of failing.
+  const asPath = resolve(name);
+  if (name.trim() !== "" && existsSync(asPath) && statSync(asPath).isDirectory()) {
+    const { name: projName, target } = createProject(root, asPath);
+    success(`registered project "${projName}" → ${target}`);
+    success(`open it with: ccws open ${projName}`);
+    return;
+  }
+
+  validateWorkspaceName(name);
 
   if (opts.force && workspaceExists(root, name)) {
     rmSync(workspacePath(root, name), { recursive: true, force: true });

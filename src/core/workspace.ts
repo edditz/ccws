@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { dirname } from "node:path";
-import { settingsPath } from "./config.js";
+import { settingsPath, workspacePath, resolveEntry } from "./config.js";
+import { isSymlink } from "./paths.js";
 
 /**
  * Validate a workspace name.
@@ -34,7 +35,28 @@ export function validateWorkspaceName(name: string): void {
 }
 
 export function workspaceExists(root: string, name: string): boolean {
+  // A symlink under $ROOT is a registered project, never a workspace — even
+  // when its target directory happens to contain .claude/settings.json of the
+  // user's own. lstat (not stat/existsSync) keeps the two kinds disjoint.
+  if (isSymlink(workspacePath(root, name))) return false;
   return existsSync(settingsPath(root, name));
+}
+
+/**
+ * Guard for workspace-only commands (add/remove/regen/bypass): name must
+ * resolve to a real workspace. Projects are read-only — reject them with a
+ * message that explains the boundary instead of a misleading "run ccws init".
+ */
+export function requireWorkspace(root: string, name: string): void {
+  const entry = resolveEntry(root, name);
+  if (entry.kind === "project" || entry.kind === "dangling") {
+    throw new Error(
+      `"${name}" is a registered project, not a workspace — projects are read-only (no additional directories to manage)`,
+    );
+  }
+  if (entry.kind === "missing") {
+    throw new Error(`workspace "${name}" does not exist — run \`ccws init ${name}\` first`);
+  }
 }
 
 export function createWorkspace(root: string, name: string): void {

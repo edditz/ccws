@@ -1,5 +1,5 @@
-import { resolveRoot, workspacePath } from "../core/config.js";
-import { workspaceExists } from "../core/workspace.js";
+import { resolveRoot } from "../core/config.js";
+import { launchCwd } from "./open.js";
 import { runClaudeSession, resumeHint, type Runner } from "../utils/claude-session.js";
 
 export interface ResumeOptions { root?: string; runner?: Runner; sessionsRoot?: string }
@@ -10,9 +10,7 @@ export async function resumeAction(
   opts: ResumeOptions,
 ): Promise<void> {
   const root = resolveRoot(opts.root);
-  if (!workspaceExists(root, name)) {
-    throw new Error(`workspace "${name}" does not exist — run \`ccws init ${name}\` first`);
-  }
+  const cwd = launchCwd(root, name); // workspaces and projects share this
   // Pass-through, mirroring claude's own semantics: an id resumes that exact
   // session, no id opens claude's interactive session picker. claude resolves
   // ids/names and prints its own errors, so nothing is validated here.
@@ -20,7 +18,7 @@ export async function resumeAction(
   const explicitId = sessionId || undefined;
   const args = explicitId ? ["--resume", explicitId] : ["--resume"];
   await runClaudeSession({
-    cwd: workspacePath(root, name),
+    cwd,
     args,
     runner: opts.runner,
     // An explicit id is exact, so it wins over the disk scan; the scanned id

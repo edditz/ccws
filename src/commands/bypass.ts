@@ -1,6 +1,6 @@
 import { resolveRoot, detectWorkspaceFromCwd, settingsPath } from "../core/config.js";
 import { readSettings, setBypassPermissions, BYPASS_MODE } from "../core/settings.js";
-import { workspaceExists, validateWorkspaceName } from "../core/workspace.js";
+import { requireWorkspace, validateWorkspaceName } from "../core/workspace.js";
 import { success, info } from "../utils/log.js";
 
 export interface BypassOptions {
@@ -33,9 +33,7 @@ export async function bypassAction(
   const name = resolveWorkspaceName(opts, root);
   validateWorkspaceName(name);
 
-  if (!workspaceExists(root, name)) {
-    throw new Error(`workspace "${name}" does not exist — run \`ccws init ${name}\` first`);
-  }
+  requireWorkspace(root, name);
 
   const path = settingsPath(root, name);
 
